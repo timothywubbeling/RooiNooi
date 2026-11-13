@@ -1,0 +1,99 @@
+{% extends "admin/base.html" %}
+{% import "admin/_macros.html" as m %}
+{% block title %}Home · Admin{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Hello!</h1>
+    <p>{{ now_local.strftime('%A %d %B') }}</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn" href="{{ url_for('admin.product_new') }}">{{ icon('plus') }}Add product</a>
+  </div>
+</div>
+
+<div class="card open-card">
+  <div class="row-icon {{ 'ok' if store_open else 'warn' }}">{{ icon('store') }}</div>
+  <div class="row-main">
+    <strong id="open-label">{{ 'Taking orders' if store_open else 'Orders paused' }}</strong>
+    <span class="hint" id="open-hint">{{ 'Customers can check out.' if store_open else 'People can browse but cannot check out.' }}</span>
+  </div>
+  <label class="switch"><span class="sr-only">Taking orders</span>
+    <input type="checkbox" id="store-open" {% if store_open %}checked{% endif %}><span class="switch-track"></span></label>
+</div>
+
+<h2 class="section-title">Orders</h2>
+<div class="tiles">
+  <a class="tile {% if counts.get('new') %}is-alert{% endif %}" href="{{ url_for('admin.orders', show='new') }}">
+    <div class="tile-label">New orders</div>
+    <div class="tile-value">{{ counts.get('new', 0) }}</div>
+    <div class="tile-foot">waiting for you</div>
+  </a>
+  <a class="tile" href="{{ url_for('admin.orders', show='unpaid') }}">
+    <div class="tile-label">Not paid yet</div>
+    <div class="tile-value">{{ unpaid.total|rands }}</div>
+    <div class="tile-foot">{{ unpaid.n }} order{{ '' if unpaid.n == 1 else 's' }}</div>
+  </a>
+  <div class="tile">
+    <div class="tile-label">Today</div>
+    <div class="tile-value">{{ today.total|rands }}</div>
+    <div class="tile-foot">{{ today.n }} order{{ '' if today.n == 1 else 's' }}</div>
+  </div>
+  <div class="tile">
+    <div class="tile-label">{{ now_local.strftime('%B') }}</div>
+    <div class="tile-value">{{ month.total|rands }}</div>
+    <div class="tile-foot">{{ month.n }} orders · {{ month.paid|rands }} paid</div>
+  </div>
+</div>
+
+<div class="grid-2" style="margin-top:12px">
+  <section>
+    <h2 class="section-title" style="margin-top:14px">Open orders</h2>
+    {% if open_orders %}
+    <div class="list">{% for o in open_orders %}{{ m.order_row(o) }}{% endfor %}</div>
+    {% else %}
+    <div class="card empty">{{ icon('receipt') }}No open orders right now.</div>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2 class="section-title" style="margin-top:14px">Still to make</h2>
+    <div class="card">
+      {% if make %}
+      <div class="make-list">
+        {% for p in make %}
+        <div class="make-item">
+          <h3><span>{{ p.name }}</span><span class="num">× {{ p.qty }}</span></h3>
+          {% for gname, vals in p.groups %}
+          <div class="make-group"><b>{{ gname }}</b>
+            <div class="make-tags">{% for label, n in vals %}<span class="pill">{{ label }} × {{ n }}</span>{% endfor %}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+      <p class="hint" style="margin-top:12px">Counts everything in orders marked New or Making.</p>
+      {% else %}
+      <div class="empty">{{ icon('box') }}Nothing to make yet.</div>
+      {% endif %}
+    </div>
+  </section>
+</div>
+
+<h2 class="section-title">Products</h2>
+<div class="list">
+  <a class="row" href="{{ url_for('admin.products') }}">
+    <div class="row-icon ok">{{ icon('tag') }}</div>
+    <div class="row-main"><div class="row-title">{{ live }} in the shop</div>
+      <div class="row-sub">{% if soldout %}{{ soldout }} marked sold out · {% endif %}tap to change prices, photos and options</div></div>
+    {{ icon('chevron-right', 'chev') }}
+  </a>
+  {% for p in no_photo %}
+  <a class="row" href="{{ url_for('admin.product_edit', product_id=p.id) }}">
+    <div class="row-icon warn">{{ icon('camera') }}</div>
+    <div class="row-main"><div class="row-title">{{ p.name }} has no photo</div><div class="row-sub">Products sell better with a photo</div></div>
+    {{ icon('chevron-right', 'chev') }}
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}

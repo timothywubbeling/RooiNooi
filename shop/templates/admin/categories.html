@@ -1,0 +1,68 @@
+{% extends "admin/base.html" %}
+{% import "admin/_macros.html" as m %}
+{% block title %}Categories · Admin{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Categories</h1>
+    <p>The groups in the shop menu. The order here is the order in the menu.</p>
+  </div>
+</div>
+
+{% for c in categories %}
+<details class="card cat-card" id="c{{ c.id }}">
+  <summary>
+    {{ m.photo(c.image, c.name) }}
+    <div class="row-main">
+      <div class="row-title">{{ c.name }}</div>
+      <div class="row-sub">{{ c.product_count }} product{{ '' if c.product_count == 1 else 's' }}{% if not c.active %} · hidden from the shop{% endif %}</div>
+    </div>
+    {% if not c.active %}<span class="pill">{{ icon('eye-off') }}Hidden</span>{% endif %}
+    {{ icon('chevron-down', 'muted') }}
+  </summary>
+  <form method="post" action="{{ url_for('admin.category_update', category_id=c.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-row">
+      <label class="field"><span class="label">Name</span>
+        <input class="input" type="text" name="name" value="{{ c.name }}" maxlength="60" required></label>
+      <label class="field"><span class="label">Web address</span>
+        <span class="input-prefix"><span style="font-size:.85rem">/shop/</span><input class="input" style="padding-left:56px" type="text" name="slug" value="{{ c.slug }}" maxlength="80"></span></label>
+    </div>
+    <label class="field"><span class="label">Description <span class="muted">(shown at the top of the category)</span></span>
+      <textarea class="textarea" name="blurb" rows="3" maxlength="600">{{ c.blurb or '' }}</textarea></label>
+    <div class="form-row">
+      <label class="field"><span class="label">Page title for Google</span>
+        <input class="input" type="text" name="meta_title" value="{{ c.meta_title or '' }}" maxlength="120"></label>
+      <label class="field"><span class="label">Search description</span>
+        <input class="input" type="text" name="meta_description" value="{{ c.meta_description or '' }}" maxlength="320"></label>
+    </div>
+    <div class="field">
+      <label class="switch"><span><span class="label" style="display:block">Show in the shop</span><span class="hint">Turn off to hide the whole category and its products.</span></span>
+        <input type="checkbox" name="active" value="1" {% if c.active %}checked{% endif %}><span class="switch-track"></span></label>
+    </div>
+    <div class="cat-tools">
+      <button class="btn btn-primary btn-sm" type="submit">{{ icon('check') }}Save</button>
+      <a class="btn btn-sm" href="{{ url_for('admin.product_new', category=c.id) }}">{{ icon('plus') }}Add product</a>
+    </div>
+  </form>
+  <div class="cat-tools">
+    {% if not loop.first %}<form method="post" action="{{ url_for('admin.category_move', category_id=c.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="dir" value="up"><button class="btn btn-ghost btn-sm" type="submit">{{ icon('up') }}Move up</button></form>{% endif %}
+    {% if not loop.last %}<form method="post" action="{{ url_for('admin.category_move', category_id=c.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="dir" value="down"><button class="btn btn-ghost btn-sm" type="submit">{{ icon('down') }}Move down</button></form>{% endif %}
+    <form method="post" action="{{ url_for('admin.category_delete', category_id=c.id) }}" data-confirm="Delete the category {{ c.name }}? Its products are kept, just without a category." style="margin-left:auto">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-ghost btn-sm" type="submit" style="color:var(--danger)">{{ icon('trash') }}Delete</button>
+    </form>
+  </div>
+</details>
+{% else %}
+<div class="card empty">{{ icon('folder') }}No categories yet.</div>
+{% endfor %}
+
+<form class="card" method="post" action="{{ url_for('admin.category_add') }}" style="margin-top:16px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card-head"><div><h2>New category</h2><p>For example “Party boxes” or “Easter”.</p></div></div>
+  <label class="field"><span class="label">Name</span><input class="input" type="text" name="name" maxlength="60" required></label>
+  <label class="field"><span class="label">Description <span class="muted">(optional)</span></span><textarea class="textarea" name="blurb" rows="2" maxlength="600"></textarea></label>
+  <button class="btn btn-primary" type="submit">{{ icon('plus') }}Add category</button>
+</form>
+{% endblock %}

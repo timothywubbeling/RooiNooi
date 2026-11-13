@@ -1,0 +1,110 @@
+{% extends "store/layout.html" %}
+{% from "store/_card.html" import card %}
+{% block title %}{{ p.meta_title or (p.name ~ ' · ' ~ S.store_name) }}{% endblock %}
+{% block description %}{{ p.meta_description or p.summary or S.meta_description }}{% endblock %}
+{% block og %}
+  <meta property="og:type" content="product">
+  {% if images %}<meta property="og:image" content="{{ request.url_root.rstrip('/') }}{{ img(images[0].file) }}">{% endif %}
+  {% if p.tags %}<meta name="keywords" content="{{ p.tags }}">{% endif %}
+{% endblock %}
+{% block content %}
+<nav class="crumbs" aria-label="Breadcrumb">
+  <a href="{{ url_for('store.shop_all') }}">Shop</a>
+  {% if p.category_slug %}<span aria-hidden="true">/</span><a href="{{ url_for('store.category', slug=p.category_slug) }}">{{ p.category_name }}</a>{% endif %}
+</nav>
+
+<div class="pdp">
+  <div class="gallery">
+    <div class="gallery-main">
+      {% if images %}<img id="gallery-main" src="{{ img(images[0].file) }}" alt="{{ p.name }}">{% else %}<span class="gallery-empty">{{ p.name|initials }}</span>{% endif %}
+    </div>
+    {% if images|length > 1 %}
+    <div class="thumbs">
+      {% for im in images %}
+      <button type="button" class="thumb{% if loop.first %} is-active{% endif %}" data-image-id="{{ im.id }}" data-src="{{ img(im.file) }}" aria-label="Show photo {{ loop.index }}"><img src="{{ img(im.file) }}" alt="" loading="lazy"></button>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="buy">
+    {% if p.category_name %}<p class="kicker">{{ p.category_name }}</p>{% endif %}
+    <h1 class="pdp-title">{{ p.name }}</h1>
+    <p class="pdp-price"><span id="unit-price">{% if varies %}From {% endif %}{{ low|rands }}</span></p>
+    {% if p.summary %}<p class="pdp-summary">{{ p.summary }}</p>{% endif %}
+
+    {% if p.status == 'soldout' %}<div class="notice">{{ icon('clock') }}<span>Sold out at the moment. Check back soon!</span></div>{% endif %}
+
+    <form id="buy-form" class="buy-form" novalidate>
+      {% for grp in groups %}
+        {% if grp.kind == 'text' %}
+        <div class="opt" data-group="{{ grp.id }}">
+          <label class="opt-head" for="g{{ grp.id }}">
+            <span class="opt-name">{{ grp.name }}</span>
+            {% if grp.price_cents %}<span class="opt-extra">+{{ grp.price_cents|rands }}</span>{% endif %}
+            <span class="opt-req">{{ 'Required' if grp.required else 'Optional' }}</span>
+          </label>
+          {% if grp.help %}<p class="opt-help">{{ grp.help }}</p>{% endif %}
+          <input class="field" type="text" id="g{{ grp.id }}" name="g{{ grp.id }}" maxlength="{{ grp.max_length }}" autocomplete="off" placeholder="Type here">
+          <p class="opt-error" role="alert" hidden></p>
+        </div>
+        {% elif grp['values'] %}
+        <fieldset class="opt" data-group="{{ grp.id }}">
+          <legend class="opt-head">
+            <span class="opt-name">{{ grp.name }}</span>
+            <span class="opt-picked" data-picked></span>
+            {% if not grp.required %}<span class="opt-req">Optional</span>{% endif %}
+          </legend>
+          {% if grp.help %}<p class="opt-help">{{ grp.help }}</p>{% endif %}
+          <div class="{{ 'swatches' if grp.has_images else 'choices' }}">
+            {% for v in grp['values'] %}
+            <label class="{{ 'swatch' if grp.has_images else 'choice' }}">
+              <input type="radio" name="g{{ grp.id }}" value="{{ v.id }}" data-label="{{ v.label }}" data-price="{{ v.price_cents }}"{% if v.image_id %} data-image="{{ v.image_id }}"{% endif %}>
+              {% if grp.has_images %}<span class="swatch-img">{% if v.image_file %}<img src="{{ img(v.image_file) }}" alt="" loading="lazy">{% endif %}</span>{% endif %}
+              <span class="choice-label">{{ v.label }}</span>
+              {% if v.price_cents %}<span class="choice-price">+{{ v.price_cents|rands }}</span>{% endif %}
+            </label>
+            {% endfor %}
+          </div>
+          <p class="opt-error" role="alert" hidden></p>
+        </fieldset>
+        {% endif %}
+      {% endfor %}
+
+      <div class="buy-row">
+        <div class="qty">
+          <button type="button" data-step="-1" aria-label="One less">{{ icon('minus') }}</button>
+          <input id="qty" type="number" min="1" max="200" value="1" inputmode="numeric" aria-label="Quantity">
+          <button type="button" data-step="1" aria-label="One more">{{ icon('plus') }}</button>
+        </div>
+        <button class="btn btn-wine btn-grow" type="submit" id="add-btn" {% if p.status == 'soldout' or not store_open %}disabled{% endif %}>
+          {{ icon('bag') }}<span>Add to bag</span><span class="btn-sum" id="line-total"></span>
+        </button>
+      </div>
+      {% if p.min_qty > 1 %}
+      <p class="min-note">{{ icon('sparkle') }}<span>Minimum of {{ p.min_qty }} per order. <span id="min-progress"></span></span></p>
+      {% endif %}
+    </form>
+
+    {% if p.description %}<div class="pdp-text">{{ p.description|paras }}</div>{% endif %}
+
+    {% if p.includes %}
+    <div class="includes">
+      <h2>What's inside</h2>
+      <ul>{% for b in p.includes|bullets %}<li>{{ icon('check') }}{{ b }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+    {% if p.sku %}<p class="sku">Product code {{ p.sku }}</p>{% endif %}
+  </div>
+</div>
+
+{% if related %}
+<section class="bestsellers related">
+  <div class="band-title"><h2>You may also like</h2></div>
+  <div class="grid">{% for r in related %}{{ card(r, related_labels) }}{% endfor %}</div>
+</section>
+{% endif %}
+
+<script type="application/json" id="product-data">{{ payload|tojson }}</script>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/product.js') }}?v={{ build }}"></script>{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Log in · {{ S.store_name }} admin{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v={{ build }}"><meta name="robots" content="noindex">{% endblock %}
+{% block body_class %}login-body{% endblock %}
+{% block body %}
+<form class="login-card" method="post">
+  <span class="a-mark">{% include "admin/_cat.svg" %}</span>
+  <h1>{{ S.store_name }}</h1>
+  <p>Shop admin</p>
+  {% if error %}<div class="errors" role="alert">{{ error }}</div>{% endif %}
+  <label class="field"><span class="label">Password</span>
+    <input class="input" type="password" name="password" autocomplete="current-password" autofocus required></label>
+  <button class="btn btn-primary btn-block btn-lg" type="submit">{{ icon('lock') }}Log in</button>
+</form>
+{% endblock %}

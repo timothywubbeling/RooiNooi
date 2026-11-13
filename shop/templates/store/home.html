@@ -1,0 +1,80 @@
+{% extends "store/layout.html" %}
+{% from "store/_card.html" import card %}
+{% block title %}{{ S.store_name }} · Customised Christmas crackers, boxes &amp; napkins{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero-inner">
+    {% if S.hero_left %}<figure class="hero-photo hero-left"><img src="{{ img(S.hero_left) }}" alt="" fetchpriority="high"></figure>{% endif %}
+    <div class="hero-arch">
+      {% if S.hero_kicker %}<p class="kicker kicker-light">{{ S.hero_kicker }}</p>{% endif %}
+      <h1 class="hero-title">{{ S.hero_title }}</h1>
+      {% if S.hero_script %}<p class="hero-script">{{ S.hero_script }}</p>{% endif %}
+      <a class="btn btn-line" href="{{ url_for('store.shop_all') }}">Browse</a>
+      <span class="hero-arrow">{{ icon('arrow-down') }}</span>
+    </div>
+    {% if S.hero_right %}<figure class="hero-photo hero-right"><img src="{{ img(S.hero_right) }}" alt=""></figure>{% endif %}
+  </div>
+</section>
+<div class="hero-foot" aria-hidden="true"></div>
+
+{% if categories %}
+<section class="section">
+  <header class="section-head">
+    <p class="kicker">Shop by</p>
+    <h2 class="h-serif">Category</h2>
+  </header>
+  <div class="cats">
+    {% for c in categories %}
+    <a class="cat" href="{{ url_for('store.product', slug=c.first_slug) if c.live_count == 1 else url_for('store.category', slug=c.slug) }}">
+      <span class="cat-arch">{% if c.image %}<img src="{{ img(c.image) }}" alt="" loading="lazy">{% endif %}</span>
+      <span class="cat-name">{{ c.name }}</span>
+      {% if cat_labels[c.id] %}<span class="cat-price">{{ cat_labels[c.id] }}</span>{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if featured %}
+<section class="bestsellers">
+  <div class="band-title"><h2>Shop our bestsellers</h2></div>
+  <div class="grid">
+    {% for p in featured %}{{ card(p, labels) }}{% endfor %}
+  </div>
+  <p class="center"><a class="btn btn-line btn-line-dark" href="{{ url_for('store.shop_all') }}">View everything</a></p>
+</section>
+{% endif %}
+
+{% if builder %}
+<section class="builder">
+  <div class="builder-media">
+    {% if builder.image %}<img src="{{ img(builder.image) }}" alt="{{ builder.name }}" loading="lazy">{% endif %}
+  </div>
+  <div class="builder-copy">
+    <p class="kicker">Make it yours</p>
+    <h2 class="h-serif">Build your own <span class="script">cracker</span></h2>
+    {% if builder.summary %}<p class="builder-lede">{{ builder.summary }}</p>{% endif %}
+    <ol class="steps">
+      {% for grp in builder_groups[:4] %}
+      <li>
+        <span class="step-n">{{ loop.index }}</span>
+        <span class="step-body"><strong>{{ grp.name }}</strong>
+          <span>{% if grp.kind == 'choice' %}{{ grp['values'][:4]|map(attribute='label')|join(' · ') }}{% if grp['values']|length > 4 %} · and more{% endif %}{% else %}{{ grp.help or 'Optional' }}{% endif %}</span>
+        </span>
+      </li>
+      {% endfor %}
+    </ol>
+    <a class="btn btn-wine" href="{{ url_for('store.product', slug=builder.slug) }}">Start building{{ icon('arrow-right') }}</a>
+  </div>
+</section>
+{% endif %}
+
+{% if S.about %}
+<section class="about">
+  <img class="monogram" src="{{ url_for('static', filename='img/monogram.png') }}" alt="" width="130" height="107" loading="lazy">
+  <p class="kicker">About us</p>
+  <h2 class="h-serif">The little <span class="script">extras</span></h2>
+  <div class="about-text">{{ S.about|paras }}</div>
+</section>
+{% endif %}
+{% endblock %}

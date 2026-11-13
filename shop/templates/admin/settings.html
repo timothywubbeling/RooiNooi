@@ -1,0 +1,136 @@
+{% extends "admin/base.html" %}
+{% import "admin/_macros.html" as m %}
+{% block title %}Settings · Admin{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Settings</h1><p>Shop text, contact details, home page, collection &amp; delivery, payments.</p></div></div>
+{% if errors %}<div class="errors" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
+
+<div class="settings-grid">
+  <form class="card" method="post" id="shop">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="section" value="shop">
+    <div class="card-head"><div><h2>Shop</h2></div></div>
+    <div class="field">
+      <label class="switch"><span><span class="label" style="display:block">Taking orders</span><span class="hint">Turn off to pause checkout. People can still browse.</span></span>
+        <input type="checkbox" name="store_open" value="1" {% if s.store_open == '1' %}checked{% endif %}><span class="switch-track"></span></label>
+    </div>
+    <label class="field"><span class="label">Shop name</span>
+      <input class="input" type="text" name="store_name" value="{{ s.store_name }}" maxlength="40" required></label>
+    <label class="field"><span class="label">Line under the logo</span>
+      <input class="input" type="text" name="tagline" value="{{ s.tagline }}" maxlength="80"></label>
+    <label class="field"><span class="label">Banner at the top of every page</span>
+      <input class="input" type="text" name="announcement" value="{{ s.announcement }}" maxlength="140" placeholder="Leave empty to hide it">
+      <span class="hint">Good for “Order by 15 December for Christmas”.</span></label>
+    <label class="field"><span class="label">Description for Google</span>
+      <textarea class="textarea" name="meta_description" rows="2" maxlength="300" style="min-height:70px">{{ s.meta_description }}</textarea></label>
+    <button class="btn btn-primary btn-block" type="submit">Save shop settings</button>
+  </form>
+
+  <form class="card" method="post" id="contact">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="section" value="contact">
+    <div class="card-head"><div><h2>Contact details</h2><p>Shown in the footer and on order pages.</p></div></div>
+    <div class="form-row">
+      <label class="field"><span class="label">Phone</span>
+        <input class="input" type="tel" name="phone" value="{{ s.phone }}" maxlength="30"></label>
+      <label class="field"><span class="label">WhatsApp number</span>
+        <input class="input" type="tel" name="whatsapp" value="{{ s.whatsapp }}" maxlength="30" placeholder="27683276896">
+        <span class="hint">With the country code, e.g. 27…</span></label>
+    </div>
+    <label class="field"><span class="label">Email</span>
+      <input class="input" type="email" name="email" value="{{ s.email }}" maxlength="120"></label>
+    <label class="field"><span class="label">Address</span>
+      <textarea class="textarea" name="address" rows="2" maxlength="200" style="min-height:70px">{{ s.address }}</textarea></label>
+    <div class="form-row">
+      <label class="field"><span class="label">Instagram link</span>
+        <input class="input" type="url" name="instagram" value="{{ s.instagram }}" maxlength="200" placeholder="https://instagram.com/…"></label>
+      <label class="field"><span class="label">Facebook link</span>
+        <input class="input" type="url" name="facebook" value="{{ s.facebook }}" maxlength="200" placeholder="https://facebook.com/…"></label>
+    </div>
+    <button class="btn btn-primary btn-block" type="submit">Save contact details</button>
+  </form>
+
+  <form class="card" method="post" id="home" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="section" value="home">
+    <div class="card-head"><div><h2>Home page</h2><p>The big burgundy banner and the “About us” text.</p></div></div>
+    <div class="form-row">
+      <label class="field"><span class="label">Small line</span>
+        <input class="input" type="text" name="hero_kicker" value="{{ s.hero_kicker }}" maxlength="40" placeholder="Shop our"></label>
+      <label class="field"><span class="label">Big word</span>
+        <input class="input" type="text" name="hero_title" value="{{ s.hero_title }}" maxlength="30" placeholder="Christmas"></label>
+    </div>
+    <label class="field"><span class="label">Handwritten word</span>
+      <input class="input" type="text" name="hero_script" value="{{ s.hero_script }}" maxlength="30" placeholder="Crackers"></label>
+    <div class="field"><span class="label">Banner photos</span>
+      <div class="hero-pick">
+        <label>{{ m.photo(s.hero_left, 'L') }}Left photo<input type="file" name="hero_left" accept="image/*" data-shrink></label>
+        <label>{{ m.photo(s.hero_right, 'R') }}Right photo<input type="file" name="hero_right" accept="image/*" data-shrink></label>
+      </div>
+      <span class="hint">Upright (portrait) photos look best. On phones only the left one shows.</span>
+    </div>
+    <label class="field"><span class="label">About us</span>
+      <textarea class="textarea" name="about" rows="5" maxlength="1200">{{ s.about }}</textarea></label>
+    <button class="btn btn-primary btn-block" type="submit">Save home page</button>
+  </form>
+
+  <form class="card" method="post" id="orders">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="section" value="orders">
+    <div class="card-head"><div><h2>Collection, delivery &amp; ordering</h2></div></div>
+    <div class="field">
+      <label class="switch"><span><span class="label" style="display:block">Collection</span><span class="hint">Customers fetch their order from you.</span></span>
+        <input type="checkbox" name="collect_enabled" value="1" {% if s.collect_enabled == '1' %}checked{% endif %}><span class="switch-track"></span></label>
+    </div>
+    <label class="field"><span class="label">Collection note</span>
+      <input class="input" type="text" name="collect_note" value="{{ s.collect_note }}" maxlength="300"></label>
+    <div class="field">
+      <label class="switch"><span><span class="label" style="display:block">Delivery</span><span class="hint">You bring the order to the customer.</span></span>
+        <input type="checkbox" name="delivery_enabled" value="1" {% if s.delivery_enabled == '1' %}checked{% endif %}><span class="switch-track"></span></label>
+    </div>
+    <div class="form-row">
+      <label class="field"><span class="label">Delivery fee</span>
+        <span class="input-prefix"><span>R</span><input class="input" type="text" name="delivery_fee" value="{{ s.delivery_fee }}" inputmode="decimal" placeholder="Quote each order"></span>
+        <span class="hint">Leave empty to agree the cost per order.</span></label>
+      <label class="field"><span class="label">Delivery note</span>
+        <input class="input" type="text" name="delivery_note" value="{{ s.delivery_note }}" maxlength="300"></label>
+    </div>
+    <label class="field"><span class="label">Message after ordering</span>
+      <textarea class="textarea" name="order_message" rows="4" maxlength="800">{{ s.order_message }}</textarea>
+      <span class="hint">Shown at checkout and on the customer's order page.</span></label>
+    <button class="btn btn-primary btn-block" type="submit">Save ordering settings</button>
+  </form>
+
+  <section class="card" id="payments">
+    <div class="card-head"><div><h2>Payments</h2></div></div>
+    <div class="status-list">
+      <div class="status-item">
+        <div class="row-icon {{ 'ok' if payments.online else 'warn' }}">{{ icon('card') }}</div>
+        <div><strong>Card payments (Yoco): not connected yet</strong>
+          <span>Orders come in as “Unpaid”. Arrange payment with the customer, then tap <b>Mark as paid</b> on the order.
+            Yoco will be added on Rooi Nooi's own Yoco account.</span></div>
+      </div>
+      <div class="status-item">
+        <div class="row-icon info">{{ icon('store') }}</div>
+        <div><strong>Shop address</strong><span>{{ base_url }}</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><div><h2>Your account</h2></div></div>
+    <div class="list">
+      <a class="row" href="{{ url_for('admin.change_password') }}">
+        <div class="row-icon">{{ icon('lock') }}</div>
+        <div class="row-main"><div class="row-title">Change password</div><div class="row-sub">Signs out other phones</div></div>
+        {{ icon('chevron-right', 'chev') }}
+      </a>
+    </div>
+    <form method="post" action="{{ url_for('admin.logout') }}" style="margin-top:12px">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-block" type="submit">{{ icon('logout') }}Log out</button>
+    </form>
+    <p class="hint" style="margin-top:10px">Version {{ app_version }}</p>
+  </section>
+</div>
+{% endblock %}

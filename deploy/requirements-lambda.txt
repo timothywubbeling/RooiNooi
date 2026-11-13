@@ -1,0 +1,3 @@
+Flask>=3.0,<4
+psycopg[binary]>=3.2,<4
+apig-wsgi>=2.18,<3

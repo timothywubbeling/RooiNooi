@@ -1,0 +1,70 @@
+{% extends "store/layout.html" %}
+{% block title %}Order {{ order.id }} · {{ S.store_name }}{% endblock %}
+{% block meta %}{{ super() }}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+{% set steps = [('new', 'Received'), ('making', 'Being made'), ('ready', 'Ready'), ('done', 'Done')] %}
+{% set step_ids = steps|map(attribute=0)|list %}
+<section class="page-hero page-hero-slim">
+  {% if just_placed %}
+  <p class="kicker">Order received</p>
+  <h1 class="h-serif">Thank you, <span class="script">{{ order.customer_name.split()[0] }}</span></h1>
+  {% else %}
+  <p class="kicker">Your order</p>
+  <h1 class="h-serif">Order {{ order.id }}</h1>
+  {% endif %}
+  <p class="lede">Order number <strong>{{ order.id }}</strong> · placed {{ order.created_at|localtime('%d %b %Y, %H:%M') }}</p>
+</section>
+
+<div class="order-wrap">
+  {% if order.status == 'cancelled' %}
+  <div class="notice">{{ icon('x') }}<span>This order was cancelled. Contact us if that's unexpected.</span></div>
+  {% else %}
+  <ol class="track" aria-label="Order progress">
+    {% for id, label in steps %}
+    <li class="{{ 'is-done' if loop.index0 <= step_ids.index(order.status) }}"><span class="track-dot">{{ icon('check') }}</span>{{ label }}</li>
+    {% endfor %}
+  </ol>
+  {% endif %}
+
+  {% if order.payment_status == 'paid' %}
+  <div class="pay-note pay-ok">{{ icon('check') }}<p><strong>Paid.</strong> Thank you!</p></div>
+  {% elif order.status != 'cancelled' %}
+  <div class="pay-note">{{ icon('card') }}<p>{{ S.order_message }}</p></div>
+  {% endif %}
+
+  <section class="co-card">
+    <h2>What you ordered</h2>
+    <ul class="order-lines">
+      {% for it in items %}
+      <li>
+        <span class="ol-img">{% if it.image_file %}<img src="{{ img(it.image_file) }}" alt="" loading="lazy">{% endif %}</span>
+        <span class="ol-main">
+          <strong>{{ it.qty }} × {{ it.product_name }}</strong>
+          {% for o in options[it.id] %}<span class="ol-opt">{{ o.group }}: {{ o.value }}</span>{% endfor %}
+        </span>
+        <span class="ol-price">{{ it.line_total_cents|rands }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    <dl class="totals">
+      <div><dt>Subtotal</dt><dd>{{ order.subtotal_cents|rands }}</dd></div>
+      <div><dt>{{ 'Delivery' if order.fulfilment == 'delivery' else 'Collection' }}</dt>
+        <dd>{% if order.fulfilment == 'collect' %}Free{% elif order.delivery_quote %}To be confirmed{% else %}{{ order.delivery_cents|rands }}{% endif %}</dd></div>
+      <div class="grand"><dt>Total</dt><dd>{{ order.total_cents|rands }}{% if order.delivery_quote %} + delivery{% endif %}</dd></div>
+    </dl>
+  </section>
+
+  <section class="co-card">
+    <h2>{{ 'Delivery to' if order.fulfilment == 'delivery' else 'Collection' }}</h2>
+    {% if order.fulfilment == 'delivery' %}<p class="pre">{{ order.address }}</p>{% else %}<p>{{ S.collect_note }}</p>{% endif %}
+    <p class="muted" style="margin-top:8px">{{ order.customer_name }} · {{ order.phone }}{% if order.email %} · {{ order.email }}{% endif %}</p>
+  </section>
+
+  <div class="order-actions">
+    {% if wa_link(S.whatsapp) %}<a class="btn btn-wine" href="{{ wa_link(S.whatsapp, 'Hi Rooi Nooi! About my order ' ~ order.id) }}" target="_blank" rel="noopener">{{ icon('whatsapp') }}WhatsApp us about this order</a>{% endif %}
+    <a class="btn btn-line btn-line-dark" href="{{ url_for('store.shop_all') }}">Keep shopping</a>
+  </div>
+  <p class="muted center small">Bookmark this page to check on your order later.</p>
+</div>
+{% endblock %}
+{% block scripts %}{% if just_placed %}<script>window.RN && RN.clear();</script>{% endif %}{% endblock %}

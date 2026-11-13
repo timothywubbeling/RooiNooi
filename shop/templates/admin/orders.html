@@ -1,0 +1,36 @@
+{% extends "admin/base.html" %}
+{% import "admin/_macros.html" as m %}
+{% block title %}Orders · Admin{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Orders</h1>
+    <p>Tap an order to see what to make, contact the customer and mark it paid.</p>
+  </div>
+</div>
+
+<div class="toolbar">
+  <nav class="chips" aria-label="Show orders">
+    {% for key, (label, _) in filters.items() %}
+    <a class="chip {% if show == key %}is-active{% endif %}" href="{{ url_for('admin.orders', show=key, q=q or None) }}">{{ label }} <span class="count">{{ counts[key] }}</span></a>
+    {% endfor %}
+  </nav>
+  <form method="get" class="search">{{ icon('search') }}
+    <input type="hidden" name="show" value="{{ show }}">
+    <input class="input" type="search" name="q" value="{{ q }}" placeholder="Search name, phone or order number" aria-label="Search orders">
+  </form>
+</div>
+
+{% if orders %}
+<div class="list">{% for o in orders %}{{ m.order_row(o) }}{% endfor %}</div>
+{% if pages > 1 %}
+<div class="pager">
+  {% if page > 1 %}<a class="btn btn-sm" href="{{ url_for('admin.orders', show=show, q=q or None, page=page - 1) }}">{{ icon('chevron-left') }}Newer</a>{% else %}<span></span>{% endif %}
+  <span>Page {{ page }} of {{ pages }}</span>
+  {% if page < pages %}<a class="btn btn-sm" href="{{ url_for('admin.orders', show=show, q=q or None, page=page + 1) }}">Older{{ icon('chevron-right') }}</a>{% else %}<span></span>{% endif %}
+</div>
+{% endif %}
+{% else %}
+<div class="card empty">{{ icon('receipt') }}{% if q %}No orders match “{{ q }}”.{% else %}No {{ filters[show][0]|lower }} orders.{% endif %}</div>
+{% endif %}
+{% endblock %}

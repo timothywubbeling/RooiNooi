@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block meta %}
+  <meta name="description" content="{% block description %}{{ S.meta_description }}{% endblock %}">
+  <meta property="og:site_name" content="{{ S.store_name }}">
+  <meta property="og:title" content="{{ self.title() }}">
+  <meta property="og:description" content="{{ self.description() }}">
+  {% block og %}{% endblock %}
+{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/store.css') }}?v={{ build }}">{% endblock %}
+{% block body_class %}store{% endblock %}
+{% block body %}
+<a class="skip" href="#main">Skip to content</a>
+{% if S.announcement %}<div class="announce"><p>{{ S.announcement }}</p></div>{% endif %}
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="mh-side mh-left">
+      {% if wa_link(S.whatsapp) %}<a class="mh-icon" href="{{ wa_link(S.whatsapp) }}" target="_blank" rel="noopener" aria-label="WhatsApp us">{{ icon('whatsapp') }}</a>{% endif %}
+      {% if S.instagram %}<a class="mh-icon" href="{{ S.instagram }}" target="_blank" rel="noopener" aria-label="Instagram">{{ icon('instagram') }}</a>{% endif %}
+      {% if S.facebook %}<a class="mh-icon" href="{{ S.facebook }}" target="_blank" rel="noopener" aria-label="Facebook">{{ icon('facebook') }}</a>{% endif %}
+      {% if S.email %}<a class="mh-icon hide-sm" href="mailto:{{ S.email }}" aria-label="Email us">{{ icon('mail') }}</a>{% endif %}
+    </div>
+    <a class="logo" href="{{ url_for('store.home') }}" aria-label="{{ S.store_name }}, home">
+      <svg class="logo-cat" viewBox="0 0 64 54" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M13 31c0-7 1-13 2-20l9 7c5-1.6 11-1.6 16 0l9-7c1 7 2 13 2 20 0 10.5-8.5 17-19 17s-19-6.5-19-17Z"/>
+        <path d="M25 30.5v.5M39 30.5v.5" stroke-width="4.4"/>
+        <path d="M30.4 36h3.2L32 38Z" fill="currentColor" stroke-width="1.6"/>
+        <path d="M28 40.5c1.6 1.4 2.8 1.4 4 0 1.2 1.4 2.4 1.4 4 0" stroke-width="2.2"/>
+        <path d="M3 35.5l12 .6M4 42l11.5-2.6M61 35.5l-12 .6M60 42l-11.5-2.6" stroke-width="2.2"/>
+      </svg>
+      <span class="logo-word">{{ S.store_name }}</span>
+      {% if S.tagline %}<span class="logo-tag">{{ S.tagline }}</span>{% endif %}
+    </a>
+    <div class="mh-side mh-right">
+      <a class="mh-icon hide-sm" href="{{ url_for('store.shop_all') }}" aria-label="All products">{{ icon('search') }}</a>
+      <button class="mh-icon bag-btn" type="button" data-open-cart aria-label="Open your bag">{{ icon('bag') }}<span class="bag-count" data-cart-count hidden>0</span></button>
+    </div>
+  </div>
+  <nav class="menu" aria-label="Shop menu">
+    <div class="menu-inner">
+      <a href="{{ url_for('store.home') }}" {% if request.endpoint == 'store.home' %}aria-current="page"{% endif %}>Home</a>
+      {% for m in menu %}<a href="{{ m.href }}" {% if request.path == m.href %}aria-current="page"{% endif %}>{{ m.name }}</a>{% endfor %}
+      <a href="#contact">Contact</a>
+    </div>
+  </nav>
+</header>
+
+{% if not store_open %}
+<div class="closed-note" role="status">{{ icon('clock') }}<span>We're not taking orders right now, but you're welcome to browse.</span></div>
+{% endif %}
+
+<main id="main">{% block content %}{% endblock %}</main>
+
+<footer class="footer" id="contact">
+  <svg class="footer-wave" viewBox="0 0 1440 48" preserveAspectRatio="none" aria-hidden="true"><path d="M0 26 C 90 6 150 6 240 22 S 390 42 480 24 S 630 4 720 22 S 870 42 960 24 S 1110 4 1200 22 S 1350 40 1440 22 V48 H0 Z"/></svg>
+  <div class="footer-inner">
+    <span class="footer-star">{{ icon('sparkle') }}</span>
+    <p class="footer-script">get in</p>
+    <h2 class="footer-title">Touch</h2>
+    <span class="footer-arrow">{{ icon('arrow-down') }}</span>
+    <p class="footer-lede">Questions, bigger orders or something special for your event? We'd love to help.</p>
+    <div class="footer-actions">
+      {% if wa_link(S.whatsapp) %}<a class="btn btn-line" href="{{ wa_link(S.whatsapp, 'Hi Rooi Nooi! ') }}" target="_blank" rel="noopener">{{ icon('whatsapp') }}WhatsApp us</a>{% endif %}
+      {% if S.email %}<a class="btn btn-line" href="mailto:{{ S.email }}">{{ icon('mail') }}Email us</a>{% endif %}
+    </div>
+    <div class="footer-grid">
+      <div>
+        <h3>Contact</h3>
+        {% if S.phone %}<p><a href="{{ tel_link(S.phone) }}">{{ S.phone }}</a></p>{% endif %}
+        {% if S.email %}<p><a href="mailto:{{ S.email }}">{{ S.email }}</a></p>{% endif %}
+      </div>
+      <div>
+        <h3>Find us</h3>
+        {{ S.address|replace(', ', ',\n')|paras }}
+      </div>
+      <div>
+        <h3>Shop</h3>
+        {% for m in menu %}<p><a href="{{ m.href }}">{{ m.name }}</a></p>{% endfor %}
+        <p><a href="{{ url_for('store.shop_all') }}">All products</a></p>
+      </div>
+    </div>
+    <p class="legal">© {{ year }} {{ S.store_name }} (Pty) Ltd · Pretoria, South Africa</p>
+  </div>
+</footer>
+
+<div class="scrim" data-close-cart hidden></div>
+<aside class="drawer" id="cart" role="dialog" aria-modal="true" aria-labelledby="cart-title" hidden>
+  <div class="drawer-head">
+    <h2 id="cart-title">Your bag</h2>
+    <button class="icon-btn" type="button" data-close-cart aria-label="Close your bag">{{ icon('x') }}</button>
+  </div>
+  <p class="drawer-added" id="cart-added" hidden>{{ icon('check') }}<span>Added to your bag</span></p>
+  <div class="drawer-body" id="cart-body"></div>
+  <div class="drawer-foot" id="cart-foot" hidden>
+    <div id="cart-problems"></div>
+    <div class="drawer-total"><span>Subtotal</span><strong id="cart-subtotal">R0</strong></div>
+    <p class="drawer-note">Collection or delivery is chosen at checkout.</p>
+    <a class="btn btn-wine btn-block" href="{{ url_for('store.checkout') }}" id="cart-checkout">Checkout{{ icon('arrow-right') }}</a>
+    <button class="btn-text" type="button" data-close-cart>Continue shopping</button>
+  </div>
+</aside>
+
+<script src="{{ url_for('static', filename='js/cart.js') }}?v={{ build }}"></script>
+{% block scripts %}{% endblock %}
+{% endblock %}

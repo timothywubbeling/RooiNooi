@@ -1,0 +1,68 @@
+# Every push to main: run the tests, build the Lambda package and put it live.
+# Pull requests only run the tests.
+#
+# AWS access: repository secrets AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY belong to the
+# IAM user "rooi-nooi-shop-github-deploy", which may only update this one function's code.
+name: Test and deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: eu-north-1   # Stockholm: same region as the Supabase database
+  FUNCTION_NAME: rooi-nooi-shop
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -r requirements.txt pytest
+      - run: pytest -q
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency: deploy-live
+    env:
+      HAS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SECRET_ACCESS_KEY != '' }}
+    steps:
+      - name: Check the AWS key is set up
+        if: env.HAS_KEY != 'true'
+        run: |
+          echo "::error::Add AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY under Settings > Secrets and variables > Actions, then re-run this workflow."
+          exit 1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Build the Lambda package
+        run: python deploy/build_lambda.py
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Put the new code live
+        run: |
+          aws lambda update-function-code --function-name "$FUNCTION_NAME" \
+            --zip-file fileb://build/rooi-nooi-shop-lambda.zip --query LastUpdateStatus --output text
+          aws lambda wait function-updated-v2 --function-name "$FUNCTION_NAME"
+      - name: Check the live shop answers
+        run: |
+          url=$(aws lambda get-function-url-config --function-name "$FUNCTION_NAME" --query FunctionUrl --output text)
+          echo "Shop: $url"
+          code=$(curl -s -o /dev/null -w "%{http_code}" "${url}healthz")
+          if [ "$code" != "200" ]; then
+            echo "::warning::The shop answered $code. If the database is not connected yet, add DATABASE_URL in the Lambda settings."
+          fi

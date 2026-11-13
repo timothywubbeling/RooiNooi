@@ -1,0 +1,64 @@
+{% extends "store/layout.html" %}
+{% block title %}Checkout · {{ S.store_name }}{% endblock %}
+{% block meta %}{{ super() }}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+<section class="page-hero page-hero-slim">
+  <p class="kicker">Almost done</p>
+  <h1 class="h-serif">Checkout</h1>
+</section>
+
+<div class="checkout">
+  <form class="co-form" id="co-form" novalidate>
+    <section class="co-card">
+      <h2><span class="co-n">1</span>Your details</h2>
+      <label class="fld"><span class="fld-label">Name</span>
+        <input class="field" name="name" autocomplete="name" maxlength="80" required></label>
+      <label class="fld"><span class="fld-label">Phone <small>we'll WhatsApp you about your order</small></span>
+        <input class="field" name="phone" type="tel" autocomplete="tel" inputmode="tel" maxlength="30" required placeholder="e.g. 082 123 4567"></label>
+      <label class="fld"><span class="fld-label">Email <small>optional</small></span>
+        <input class="field" name="email" type="email" autocomplete="email" maxlength="120"></label>
+    </section>
+
+    <section class="co-card">
+      <h2><span class="co-n">2</span>Collection or delivery</h2>
+      <div class="ways">
+        {% for w in ways %}
+        <label class="way">
+          <input type="radio" name="fulfilment" value="{{ w.id }}" data-fee="{{ w.fee_cents }}" data-quote="{{ 1 if w.quote else 0 }}" {% if loop.first %}checked{% endif %}>
+          <span class="way-icon">{{ icon('store' if w.id == 'collect' else 'truck') }}</span>
+          <span class="way-body"><strong>{{ w.label }}</strong>{% if w.note %}<span>{{ w.note }}</span>{% endif %}</span>
+          <span class="way-fee">{% if w.id == 'collect' %}Free{% elif w.quote %}To be confirmed{% else %}{{ w.fee_cents|rands }}{% endif %}</span>
+        </label>
+        {% endfor %}
+      </div>
+      <label class="fld" id="address-field" hidden><span class="fld-label">Delivery address</span>
+        <textarea class="field" name="address" rows="3" autocomplete="street-address" maxlength="400"></textarea></label>
+    </section>
+
+    <section class="co-card">
+      <h2><span class="co-n">3</span>Anything we should know? <small>optional</small></h2>
+      <label class="fld"><span class="sr-only">Note for Rooi Nooi</span>
+        <textarea class="field" name="note" rows="3" maxlength="600" placeholder="e.g. the date you need your order by"></textarea></label>
+    </section>
+
+    <div class="pay-note">{{ icon('card') }}<p>{{ S.order_message }}</p></div>
+    <p class="form-error" id="co-error" role="alert" hidden></p>
+    <button class="btn btn-wine btn-block btn-lg" type="submit" id="co-submit" disabled>Place order</button>
+    {% if not store_open %}<p class="form-error">We're not taking orders right now.</p>{% endif %}
+  </form>
+
+  <aside class="co-summary" aria-labelledby="co-sum-title">
+    <h2 id="co-sum-title">Your order</h2>
+    <div id="co-lines" class="co-lines"><p class="muted">Loading your bag…</p></div>
+    <div id="co-problems"></div>
+    <dl class="totals">
+      <div><dt>Subtotal</dt><dd id="co-subtotal">–</dd></div>
+      <div><dt>Delivery</dt><dd id="co-delivery">–</dd></div>
+      <div class="grand"><dt>Total</dt><dd id="co-total">–</dd></div>
+    </dl>
+    <button class="btn-text" type="button" data-open-cart>Edit your bag</button>
+  </aside>
+</div>
+<script>window.SHOP_OPEN = {{ 'true' if store_open else 'false' }};</script>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/checkout.js') }}?v={{ build }}"></script>{% endblock %}

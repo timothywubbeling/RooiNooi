@@ -1,0 +1,212 @@
+{
+  "note": "Loaded once, the first time the shop starts with an empty database. After that everything is changed in the admin.",
+  "settings": {
+    "hero_left": "cracker-fillings.jpg",
+    "hero_right": "box-vintage-santa-red.jpg"
+  },
+  "categories": [
+    {
+      "name": "Customised crackers",
+      "slug": "customised-crackers",
+      "blurb": "Make a Christmas cracker that is yours. Choose your outside paper, pick a filling and choose the little paper inside.",
+      "meta_title": "Customised Christmas Crackers | Rooi Nooi Events",
+      "meta_description": "Build your own Christmas crackers: choose the outside paper, filling and inside paper. Rooi Nooi Events, Pretoria.",
+      "products": [
+        {
+          "name": "Customised Christmas Cracker",
+          "slug": "customised-christmas-cracker",
+          "sku": "RN-CRK-CUSTOM",
+          "price": "7.90",
+          "min_qty": 4,
+          "featured": true,
+          "summary": "Build your own · minimum of 4 per order",
+          "description": "Make a Christmas cracker that is yours. Choose your outside paper, pick a filling, and choose the little paper inside. The paper comes in English or Afrikaans, and every cracker comes with a paper crown. You can add names too.\n\nEach cracker can have a different filling, so add one cracker at a time and choose its options each time.",
+          "includes": "Paper crown",
+          "meta_title": "Customised Christmas Cracker | Rooi Nooi Events",
+          "meta_description": "Customised Christmas crackers: choose your outside paper, filling and inside paper in English or Afrikaans. Comes with a paper crown. Rooi Nooi Events.",
+          "tags": "christmas crackers, customised crackers, personalised crackers, cracker fillings",
+          "images": [
+            "crackers.jpg",
+            "cracker-fillings.jpg",
+            "paper-vintage-santa-green.jpg",
+            "paper-vintage-santa-red.jpg",
+            "paper-candy-stripe-green.jpg",
+            "paper-candy-stripe-red.jpg",
+            "paper-merry-christmas-green.jpg",
+            "paper-merry-christmas-red.jpg"
+          ],
+          "options": [
+            {
+              "name": "Outside paper", "kind": "choice", "required": true,
+              "values": [
+                {"label": "Vintage Santa – Green", "image": "paper-vintage-santa-green.jpg"},
+                {"label": "Vintage Santa – Red", "image": "paper-vintage-santa-red.jpg"},
+                {"label": "Candy Stripe – Green", "image": "paper-candy-stripe-green.jpg"},
+                {"label": "Candy Stripe – Red", "image": "paper-candy-stripe-red.jpg"},
+                {"label": "Merry Christmas – Green", "image": "paper-merry-christmas-green.jpg"},
+                {"label": "Merry Christmas – Red", "image": "paper-merry-christmas-red.jpg"}
+              ]
+            },
+            {
+              "name": "Filling", "kind": "choice", "required": true,
+              "help": "The filling price is added to the cracker price.",
+              "values": [
+                {"label": "Lip balm", "price": "22.50"},
+                {"label": "Braai spice", "price": "20.00"},
+                {"label": "Cat toy", "price": "17.00"},
+                {"label": "Face mask", "price": "13.00"},
+                {"label": "Chocolates", "price": "21.00"},
+                {"label": "Stickers", "price": "11.00"},
+                {"label": "Slime", "price": "13.00"},
+                {"label": "Bath bomb", "price": "33.00"},
+                {"label": "Dog toy", "price": "20.00"}
+              ]
+            },
+            {
+              "name": "Inside paper", "kind": "choice", "required": true,
+              "values": [
+                {"label": "Secret mission"},
+                {"label": "Challenge for all"},
+                {"label": "Tongue twister"},
+                {"label": "Christmas joke"},
+                {"label": "Recipe"},
+                {"label": "Bible verse"}
+              ]
+            },
+            {
+              "name": "Language", "kind": "choice", "required": true,
+              "help": "The inside paper comes in English or Afrikaans.",
+              "values": [{"label": "English"}, {"label": "Afrikaans"}]
+            },
+            {
+              "name": "Name on the cracker", "kind": "text", "required": false, "price": "1.00", "max_length": 30,
+              "help": "Add a name to make it extra personal."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Premade boxes",
+      "slug": "premade-boxes",
+      "blurb": "Don't want to choose everything yourself? Our premade boxes hold 6 crackers with a mix of fillings and papers. Just pick the outside paper you like best.",
+      "meta_title": "Premade Cracker Boxes | Rooi Nooi Events",
+      "meta_description": "Premade boxes of 6 Christmas crackers with a mix of fillings and papers. Choose your outside paper. Rooi Nooi Events.",
+      "box_options": [
+        {"label": "Vintage Santa – Red", "image": "box-vintage-santa-red.jpg"},
+        {"label": "Vintage Santa – Green", "image": "box-vintage-santa-green.jpg"},
+        {"label": "Candy Stripe – Red", "image": "box-candy-stripe-red.jpg"},
+        {"label": "Candy Stripe – Green", "image": "box-candy-stripe-green.jpg"},
+        {"label": "Merry Christmas – Red", "image": "box-merry-christmas-red.jpg"},
+        {"label": "Merry Christmas – Green", "image": "box-merry-christmas-green.jpg"}
+      ],
+      "products": [
+        {
+          "name": "The Full House", "slug": "the-full-house", "sku": "RN-PB-FULLHOUSE", "price": "180.00",
+          "featured": true, "main_image": "box-vintage-santa-red.jpg",
+          "summary": "Box of 6 crackers · something for everyone",
+          "description": "Can't choose just one? Don't. The ultimate crowd-pleaser for your Christmas gathering.",
+          "includes": "Braai spice, sheet face mask, bath bomb, lip balm, stickers, slime, joke, paper crown",
+          "meta_title": "The Full House | Rooi Nooi Events",
+          "meta_description": "Something for everyone! The Full House Christmas crackers include braai spice, face mask, bath bomb, lip balm, stickers and slime.",
+          "tags": "christmas, christmas cracker, gifts for family, festive, rooi nooi"
+        },
+        {
+          "name": "The Glow Getter", "slug": "the-glow-getter", "sku": "RN-PB-GLOWGETTER", "price": "145.00",
+          "featured": true, "main_image": "box-candy-stripe-red.jpg",
+          "summary": "Box of 6 crackers · for her",
+          "description": "The Glow Getter is all about a little self-care amongst the Christmas chaos. Because every girl deserves her own little pamper moment.",
+          "includes": "Sheet face mask, joke, paper crown",
+          "meta_title": "The Glow Getter Christmas Crackers | Rooi Nooi Events",
+          "meta_description": "Give her a little self-care this Christmas. The Glow Getter Christmas crackers include a sheet face mask. Shop unique Christmas gifts at Rooi Nooi.",
+          "tags": "christmas, christmas cracker, gifts for her, woman gifts"
+        },
+        {
+          "name": "The Man Cave", "slug": "the-man-cave", "sku": "RN-PB-MANCAVE", "price": "175.00",
+          "featured": false, "main_image": "box-merry-christmas-green.jpg",
+          "summary": "Box of 6 crackers · for the braai master",
+          "description": "For the men who take their braai seriously. This box is perfect for the braai masters, weekend grillers and anyone who believes everything tastes better on the fire.",
+          "includes": "Braai spice, joke, paper crown",
+          "meta_title": "The Man Cave Christmas Crackers | Rooi Nooi",
+          "meta_description": "Christmas crackers for the braai lover. The Man Cave comes with a braai spice surprise.",
+          "tags": "christmas cracker, gifts for him, men's gifts, rooi nooi"
+        },
+        {
+          "name": "The Mini Madness", "slug": "the-mini-madness", "sku": "RN-PB-MINIMADNESS", "price": "145.00",
+          "featured": false, "main_image": "box-candy-stripe-green.jpg",
+          "summary": "Box of 6 crackers · for the kids",
+          "description": "For the little troublemakers who make Christmas a little louder and a whole lot more fun.",
+          "includes": "Slime, joke, paper crown",
+          "meta_title": "The Mini Madness | Rooi Nooi Events",
+          "meta_description": "Fun Christmas crackers for the kids! The Mini Madness includes a slime surprise for little hands and big imaginations. Shop Rooi Nooi.",
+          "tags": "christmas, christmas cracker, gifts for kids, slime, rooi nooi"
+        },
+        {
+          "name": "The Plus One", "slug": "the-plus-one", "sku": "RN-PB-PLUSONE", "price": "165.00",
+          "featured": false, "main_image": "box-merry-christmas-red.jpg",
+          "summary": "Box of 6 crackers · for couples",
+          "description": "One for the braai lover, one for the self-care lover. Whether you're opposites or the perfect match, this one's made to be shared.",
+          "includes": "3 × braai spice, 3 × face mask, joke, paper crown",
+          "meta_title": "The Plus One | Rooi Nooi Events",
+          "meta_description": "The perfect Christmas cracker set for couples! The Plus One includes 3 braai spice and 3 face masks. Shop Rooi Nooi.",
+          "tags": "christmas, christmas cracker, his and hers gifts, festive, rooi nooi"
+        },
+        {
+          "name": "The Sweet Spot", "slug": "the-sweet-spot", "sku": "RN-PB-SWEETSPOT", "price": "185.00",
+          "featured": false, "main_image": "box-vintage-santa-green.jpg",
+          "summary": "Box of 6 crackers · for chocolate lovers",
+          "description": "For those who always save room for dessert. Because Christmas calories simply don't count!",
+          "includes": "Chocolate selection, joke, paper crown",
+          "meta_title": "The Sweet Spot | Rooi Nooi Events",
+          "meta_description": "For the chocolate lovers! The Sweet Spot Christmas crackers are filled with chocolate surprises. A sweet addition to your festive table.",
+          "tags": "christmas, christmas cracker, gifts for family, festive, rooi nooi"
+        }
+      ]
+    },
+    {
+      "name": "Napkins",
+      "slug": "napkins",
+      "blurb": "Dress your Christmas table with our festive napkins. Choose from four designs. Each pack has 20 napkins.",
+      "meta_title": "Christmas Napkins | Rooi Nooi Events",
+      "meta_description": "Festive Christmas napkins in four designs: The Snow Globe, The Noël, The Woodland and The Nutcracker. R40 per pack of 20. Rooi Nooi Events.",
+      "products": [
+        {
+          "name": "The Noël", "slug": "the-noel-napkins", "sku": "RN-NAP-NOEL", "price": "40.00", "featured": true,
+          "summary": "Pack of 20 napkins",
+          "description": "A classic Christmas scene with Santa, deer, red cardinals and pine trees in a snowy forest, with holly and pinecones. A warm, traditional napkin for a family Christmas lunch. Each pack has 20 napkins.",
+          "images": ["napkin-the-noel.jpg"],
+          "meta_title": "The Noël Christmas Napkins | Rooi Nooi Events",
+          "meta_description": "The Noël Christmas napkins: Santa, deer and cardinals in a snowy forest. A classic, traditional design. R40 per pack of 20. Rooi Nooi Events.",
+          "tags": "santa napkins, christmas napkins, traditional christmas"
+        },
+        {
+          "name": "The Nutcracker", "slug": "the-nutcracker-napkins", "sku": "RN-NAP-NUTCRACKER", "price": "40.00", "featured": false,
+          "summary": "Pack of 20 napkins",
+          "description": "Red-coated nutcracker soldiers, little decorated trees and sprigs of holly on a deep green background. A rich, festive napkin that stands out on any table. Each pack has 20 napkins.",
+          "images": ["napkin-the-nutcracker.jpg"],
+          "meta_title": "The Nutcracker Christmas Napkins | Rooi Nooi Events",
+          "meta_description": "The Nutcracker Christmas napkins: red-coated nutcrackers and little trees on deep green. R40 per pack of 20. Rooi Nooi Events.",
+          "tags": "nutcracker napkins, christmas napkins, festive table"
+        },
+        {
+          "name": "The Snow Globe", "slug": "the-snowglobe-napkins", "sku": "RN-NAP-SNOWGLOBE", "price": "40.00", "featured": false,
+          "summary": "Pack of 20 napkins",
+          "description": "Cheerful snowmen in red hats and scarves, golden stars and little wrapped gifts on a soft green background. A playful napkin that brings smiles to the Christmas table. Each pack has 20 napkins.",
+          "images": ["napkin-the-snow-globe.jpg"],
+          "meta_title": "The Snow Globe Christmas Napkins | Rooi Nooi Events",
+          "meta_description": "The Snow Globe Christmas napkins: cheerful snowmen, gifts and golden stars on soft green. R40 per pack of 20. Rooi Nooi Events.",
+          "tags": "snowman napkins, christmas napkins, snow globe"
+        },
+        {
+          "name": "The Woodland", "slug": "the-woodland-napkins", "sku": "RN-NAP-WOODLAND", "price": "40.00", "featured": false,
+          "summary": "Pack of 20 napkins",
+          "description": "A decorated Christmas tree topped with a golden star, with “Merry Christmas” in elegant lettering and a holly and berry border, on a soft cream background. Simple and elegant. Each pack has 20 napkins.",
+          "images": ["napkin-the-woodland.jpg"],
+          "meta_title": "The Woodland Christmas Napkins | Rooi Nooi Events",
+          "meta_description": "The Woodland Christmas napkins: a decorated tree, “Merry Christmas” lettering and a holly border on cream. R40 per pack of 20. Rooi Nooi Events.",
+          "tags": "christmas tree napkins, merry christmas napkins, christmas napkins"
+        }
+      ]
+    }
+  ]
+}

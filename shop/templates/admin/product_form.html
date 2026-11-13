@@ -1,0 +1,148 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ product.name if product else 'New product' }} · Admin{% endblock %}
+{% block content %}
+<a class="back-link" href="{{ url_for('admin.products') }}">{{ icon('chevron-left') }}Products</a>
+<div class="page-head">
+  <div>
+    <h1>{{ product.name if product else 'New product' }}</h1>
+    {% if product %}<p><a href="{{ url_for('store.product', slug=product.slug) }}" target="_blank" rel="noopener">View in the shop</a></p>{% endif %}
+  </div>
+  {% if product %}
+  <div class="page-actions">
+    <form method="post" action="{{ url_for('admin.product_duplicate', product_id=product.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-sm" type="submit" title="Make a copy with the same photos and options">{{ icon('copy') }}Make a copy</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+
+{% if errors %}<div class="errors" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
+
+<form method="post" enctype="multipart/form-data" id="product-form" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="image_order" value="">
+  <input type="hidden" name="options_json" value="">
+  <input type="hidden" name="after" value="">
+
+  <div class="grid-2">
+    <section class="card">
+      <div class="card-head"><div><h2>Details</h2></div></div>
+      <label class="field"><span class="label">Name</span>
+        <input class="input" type="text" name="name" value="{{ values.name }}" maxlength="100" required autocomplete="off" placeholder="e.g. The Full House"></label>
+      <div class="form-row">
+        <label class="field"><span class="label">Price</span>
+          <span class="input-prefix"><span>R</span><input class="input" type="text" name="price" value="{{ values.price }}" inputmode="decimal" required placeholder="145.00"></span>
+          <span class="hint">Choices below can add to this.</span></label>
+        <label class="field"><span class="label">Category</span>
+          <select class="select" name="category_id">
+            <option value="">No category</option>
+            {% for c in categories %}<option value="{{ c.id }}" {% if values.category_id == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+          </select></label>
+      </div>
+      <label class="field"><span class="label">Short line <span class="muted">(under the name)</span></span>
+        <input class="input" type="text" name="summary" value="{{ values.summary }}" maxlength="120" placeholder="e.g. Box of 6 crackers · for her"></label>
+      <div class="field"><span class="label">Show in the shop?</span>
+        <div class="segmented" role="radiogroup">
+          {% for key, label in PRODUCT_STATUSES.items() %}
+          <label><input type="radio" name="status" value="{{ key }}" {% if values.status == key %}checked{% endif %}><span>{{ label }}</span></label>
+          {% endfor %}
+        </div>
+        <span class="hint">Sold out shows the product but nobody can order it. Hidden takes it off the shop.</span>
+      </div>
+      <div class="form-row">
+        <label class="field"><span class="label">Minimum per order</span>
+          <input class="input" type="number" name="min_qty" value="{{ values.min_qty }}" min="1" max="500" inputmode="numeric">
+          <span class="hint">e.g. 4 for customised crackers.</span></label>
+        <div class="field"><span class="label">Home page</span>
+          <label class="switch"><span class="hint">Show under “bestsellers”</span>
+            <input type="checkbox" name="featured" value="1" {% if values.featured %}checked{% endif %}><span class="switch-track"></span></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><div><h2>Photos</h2><p>The first photo is the main one. Use ★ to make a photo the main one.</p></div></div>
+      <div class="photo-grid">
+        <div id="photo-tiles" style="display:contents"></div>
+        <label class="photo-add">{{ icon('camera') }}<span>Add photos</span>
+          <input type="file" name="photos" id="photo-input" accept="image/*" multiple></label>
+      </div>
+      <p class="hint" id="photo-note" style="margin-top:10px" hidden></p>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:12px">
+    <div class="card-head"><div><h2>Description</h2><p>Leave an empty line between paragraphs.</p></div></div>
+    <label class="field"><span class="sr-only">Description</span>
+      <textarea class="textarea" name="description" rows="5" maxlength="5000">{{ values.description }}</textarea></label>
+    <label class="field"><span class="label">What's inside <span class="muted">(optional, separate with commas)</span></span>
+      <input class="input" type="text" name="includes" value="{{ values.includes }}" maxlength="600" placeholder="e.g. Braai spice, joke, paper crown"></label>
+  </section>
+
+  <section class="card" style="margin-top:12px" id="options">
+    <div class="card-head"><div><h2>Options customers choose</h2>
+      <p>For example outside paper, filling or a name. Each choice can add to the price and show its own photo.</p></div></div>
+    <div class="opt-groups" id="opt-groups"></div>
+    <div class="opt-footer">
+      <button class="btn btn-sm" type="button" data-add-group="choice">{{ icon('plus') }}Pick-one option</button>
+      <button class="btn btn-sm" type="button" data-add-group="text">{{ icon('plus') }}Text option (e.g. a name)</button>
+      {% if others %}
+      <select class="select btn-sm" id="copy-from" style="width:auto;min-height:36px;padding:4px 10px" aria-label="Copy options from another product">
+        <option value="">Copy options from…</option>
+        {% for o in others %}<option value="{{ o.id }}">{{ o.name }}</option>{% endfor %}
+      </select>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:12px">
+    <details class="more">
+      <summary><span><span style="display:block">Search engines &amp; product code</span><span class="hint" style="font-weight:400">How the product shows up on Google, and its web address.</span></span>{{ icon('chevron-down') }}</summary>
+      <div class="form-row">
+        <label class="field"><span class="label">Web address</span>
+          <span class="input-prefix"><span style="font-size:.85rem">/product/</span><input class="input" style="padding-left:74px" type="text" name="slug" value="{{ values.slug }}" maxlength="80" placeholder="made from the name"></span></label>
+        <label class="field"><span class="label">Product code</span>
+          <input class="input" type="text" name="sku" value="{{ values.sku }}" maxlength="40" placeholder="e.g. RN-PB-FULLHOUSE"></label>
+      </div>
+      <label class="field"><span class="label">Page title</span>
+        <input class="input" type="text" name="meta_title" value="{{ values.meta_title }}" maxlength="120" placeholder="e.g. The Full House | Rooi Nooi Events"></label>
+      <label class="field"><span class="label">Search description</span>
+        <textarea class="textarea" name="meta_description" rows="2" maxlength="320" style="min-height:70px">{{ values.meta_description }}</textarea></label>
+      <label class="field"><span class="label">Tags</span>
+        <input class="input" type="text" name="tags" value="{{ values.tags }}" maxlength="300" placeholder="christmas, christmas cracker, gifts"></label>
+    </details>
+  </section>
+
+  <div class="form-actions">
+    <a class="btn btn-ghost" href="{{ url_for('admin.products') }}">Cancel</a>
+    {% if product %}<button class="btn" type="submit" data-after="view">Save &amp; view</button>{% endif %}
+    <button class="btn btn-primary" type="submit">{{ icon('check') }}Save product</button>
+  </div>
+</form>
+
+{% if product %}
+<section class="danger-zone card">
+  <div class="card-head"><div><h2>Delete this product</h2><p>Past orders keep showing what was bought. To take it off the shop for a while, choose Hidden above instead.</p></div></div>
+  <form method="post" action="{{ url_for('admin.product_delete', product_id=product.id) }}" data-confirm="Delete {{ product.name }}? This cannot be undone.">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-danger" type="submit">{{ icon('trash') }}Delete product</button>
+  </form>
+</section>
+{% endif %}
+
+<div class="picker" id="picker" hidden>
+  <div class="picker-card" role="dialog" aria-modal="true" aria-labelledby="picker-title">
+    <div class="card-head"><div><h2 id="picker-title">Photo for this choice</h2><p>Shown when a customer picks it.</p></div>
+      <button class="icon-btn" type="button" data-close-picker aria-label="Close">{{ icon('x') }}</button></div>
+    <div class="picker-grid" id="picker-grid"></div>
+    <button class="btn btn-block" type="button" data-pick="">No photo</button>
+    <p class="hint" style="margin-top:10px">Add more photos in the Photos box first.</p>
+  </div>
+</div>
+
+{% set photos = [] %}
+{% for i in images %}{% set _ = photos.append({'ref': i.ref, 'url': img(i.file), 'file': i.file}) %}{% endfor %}
+<script type="application/json" id="form-data">{{ {'images': photos, 'options': options, 'media': url_for('store.media', name='x')[:-1]}|tojson }}</script>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/product_form.js') }}?v={{ build }}"></script>{% endblock %}

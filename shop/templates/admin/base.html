@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v={{ build }}"><meta name="robots" content="noindex">{% endblock %}
+{% block body_class %}admin-body{% endblock %}
+{% block body %}
+{% set tabs = [
+  ('admin.dashboard', 'Home', 'home', ['admin.dashboard']),
+  ('admin.orders', 'Orders', 'receipt', ['admin.orders', 'admin.order_detail']),
+  ('admin.products', 'Products', 'tag', ['admin.products', 'admin.product_new', 'admin.product_edit']),
+  ('admin.categories', 'Categories', 'folder', ['admin.categories']),
+  ('admin.settings', 'Settings', 'sliders', ['admin.settings', 'admin.change_password']),
+] %}
+<header class="a-top">
+  <a class="a-brand" href="{{ url_for('admin.dashboard') }}">
+    <span class="a-mark">{% include "admin/_cat.svg" %}</span>
+    <span><strong>{{ S.store_name }}</strong><small>Shop admin</small></span>
+  </a>
+  <div class="a-top-right">
+    <a class="icon-btn" href="{{ url_for('store.home') }}" target="_blank" rel="noopener" aria-label="Open the shop" title="Open the shop">{{ icon('store') }}</a>
+    <form method="post" action="{{ url_for('admin.logout') }}" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="icon-btn" type="submit" aria-label="Log out" title="Log out">{{ icon('logout') }}</button>
+    </form>
+  </div>
+</header>
+
+<nav class="a-tabs" aria-label="Admin sections">
+  {% for endpoint, label, ic, group in tabs %}
+  <a class="a-tab {% if nav in group %}is-active{% endif %}" href="{{ url_for(endpoint) }}" {% if nav in group %}aria-current="page"{% endif %}>
+    {{ icon(ic) }}<span>{{ label }}</span>
+    {% if endpoint == 'admin.orders' and new_orders %}<span class="dot" aria-label="{{ new_orders }} new">{{ new_orders }}</span>{% endif %}
+  </a>
+  {% endfor %}
+</nav>
+
+<main class="a-main">
+  {% with messages = get_flashed_messages() %}
+    {% for message in messages %}<div class="flash" role="status">{{ icon('check') }}<span>{{ message }}</span></div>{% endfor %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>window.CSRF = {{ csrf_token()|tojson }};</script>
+<script src="{{ url_for('static', filename='js/admin.js') }}?v={{ build }}"></script>
+{% block scripts %}{% endblock %}
+{% endblock %}

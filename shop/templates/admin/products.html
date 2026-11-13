@@ -1,0 +1,81 @@
+{% extends "admin/base.html" %}
+{% import "admin/_macros.html" as m %}
+{% block title %}Products · Admin{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Products</h1>
+    <p>Everything in the shop. Tap one to change its price, photos, options or text.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-primary" href="{{ url_for('admin.product_new') }}">{{ icon('plus') }}New product</a>
+  </div>
+</div>
+
+{% if products|length > 6 %}
+<div class="toolbar">
+  <label class="search">{{ icon('search') }}<span class="sr-only">Search products</span>
+    <input class="input" type="search" id="product-search" placeholder="Search products"></label>
+</div>
+{% endif %}
+
+{% set groups = [] %}
+{% for c in categories %}{% set _ = groups.append((c, products|selectattr('category_id', 'equalto', c.id)|list)) %}{% endfor %}
+{% set loose = products|selectattr('category_id', 'none')|list %}
+{% if loose %}{% set _ = groups.append((None, loose)) %}{% endif %}
+
+{% for c, items in groups %}
+<section class="cat-block" data-block>
+  <div class="cat-block-head">
+    <h2>{{ c.name if c else 'No category' }}{% if c and not c.active %} · hidden{% endif %}</h2>
+    {% if c %}<a class="btn btn-ghost btn-sm" href="{{ url_for('admin.product_new', category=c.id) }}">{{ icon('plus') }}Add</a>{% endif %}
+  </div>
+  {% if items %}
+  <div class="products-grid">
+    {% for p in items %}
+    <div class="p-card {% if p.status == 'hidden' %}is-hidden{% endif %}" id="p{{ p.id }}" data-name="{{ (p.name ~ ' ' ~ (p.sku or ''))|lower }}">
+      <a href="{{ url_for('admin.product_edit', product_id=p.id) }}" style="display:contents">
+        {{ m.photo(p.image, p.name) }}
+        <span class="p-card-name">{{ p.name }}</span>
+      </a>
+      <div class="p-card-meta"><strong>{{ labels[p.id] }}</strong>{{ m.product_pill(p.status) }}</div>
+      <div class="p-card-meta">
+        <span>{% if p.featured %}{{ icon('star') }} Home page{% elif p.min_qty > 1 %}Min {{ p.min_qty }}{% else %}&nbsp;{% endif %}</span>
+        <span>
+          {% if not loop.first %}<form class="inline-form" method="post" action="{{ url_for('admin.product_move', product_id=p.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="dir" value="up"><button class="icon-btn" style="width:30px;height:30px" type="submit" aria-label="Move {{ p.name }} earlier" title="Move earlier">{{ icon('chevron-left') }}</button></form>{% endif %}
+          {% if not loop.last %}<form class="inline-form" method="post" action="{{ url_for('admin.product_move', product_id=p.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="dir" value="down"><button class="icon-btn" style="width:30px;height:30px" type="submit" aria-label="Move {{ p.name }} later" title="Move later">{{ icon('chevron-right') }}</button></form>{% endif %}
+        </span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card empty">Nothing in {{ c.name if c else 'here' }} yet.</div>
+  {% endif %}
+</section>
+{% else %}
+<div class="card empty">{{ icon('tag') }}No products yet. Tap <strong>New product</strong> to add your first one.</div>
+{% endfor %}
+<p class="empty" id="no-match" hidden>No products match that search.</p>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var input = document.getElementById("product-search");
+  if (!input) return;
+  input.addEventListener("input", function () {
+    var q = input.value.trim().toLowerCase(), shown = 0;
+    document.querySelectorAll("[data-block]").forEach(function (block) {
+      var inBlock = 0;
+      block.querySelectorAll(".p-card").forEach(function (card) {
+        var hit = !q || card.getAttribute("data-name").indexOf(q) >= 0;
+        card.hidden = !hit;
+        if (hit) { shown++; inBlock++; }
+      });
+      block.hidden = q && !inBlock;
+    });
+    document.getElementById("no-match").hidden = shown > 0;
+  });
+})();
+</script>
+{% endblock %}

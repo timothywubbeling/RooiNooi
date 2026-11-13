@@ -1,0 +1,42 @@
+{% macro status_pill(status) -%}
+  {%- if status == 'new' -%}<span class="pill pill-bad">New</span>
+  {%- elif status == 'making' -%}<span class="pill pill-warn">Making</span>
+  {%- elif status == 'ready' -%}<span class="pill pill-info">Ready</span>
+  {%- elif status == 'done' -%}<span class="pill pill-ok">Done</span>
+  {%- else -%}<span class="pill">Cancelled</span>
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro pay_pill(order) -%}
+  {%- if order.payment_status == 'paid' -%}<span class="pill pill-ok">Paid</span>
+  {%- elif order.status != 'cancelled' -%}<span class="pill pill-accent">Unpaid</span>
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro product_pill(status) -%}
+  {%- if status == 'live' -%}<span class="pill pill-ok">In the shop</span>
+  {%- elif status == 'soldout' -%}<span class="pill pill-warn">Sold out</span>
+  {%- else -%}<span class="pill">{{ icon('eye-off') }}Hidden</span>
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro photo(file, name, cls='') -%}
+  <span class="photo {{ cls }}">
+    {%- if file %}<img src="{{ img(file) }}" alt="" loading="lazy" decoding="async">{% else %}{{ name|initials }}{% endif -%}
+  </span>
+{%- endmacro %}
+
+{% macro order_row(o) -%}
+<a class="row" href="{{ url_for('admin.order_detail', order_id=o.id) }}">
+  <div class="row-main">
+    <div class="row-title">{{ o.customer_name }} <span class="muted">· {{ o.id }}</span></div>
+    <div class="row-sub">{{ o.summary or '' }}</div>
+    <div class="row-sub">{{ o.created_at|ago }} · {{ 'Delivery' if o.fulfilment == 'delivery' else 'Collect' }}</div>
+  </div>
+  <div class="row-end">
+    <span class="row-amount">{{ o.total_cents|rands }}</span>
+    <span>{{ status_pill(o.status) }} {{ pay_pill(o) }}</span>
+  </div>
+  {{ icon('chevron-right', 'chev') }}
+</a>
+{%- endmacro %}

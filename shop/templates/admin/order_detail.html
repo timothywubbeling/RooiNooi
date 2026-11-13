@@ -1,0 +1,123 @@
+{% extends "admin/base.html" %}
+{% import "admin/_macros.html" as m %}
+{% block title %}{{ order.id }} · Orders · Admin{% endblock %}
+{% block content %}
+<a class="back-link no-print" href="{{ url_for('admin.orders') }}">{{ icon('chevron-left') }}Orders</a>
+<div class="page-head">
+  <div>
+    <h1>{{ order.customer_name }}</h1>
+    <p>Order {{ order.id }} · {{ order.created_at|localtime }} ({{ order.created_at|ago }})</p>
+  </div>
+  <div class="page-actions no-print">
+    <button class="btn btn-sm" type="button" onclick="window.print()">{{ icon('print') }}Print</button>
+  </div>
+</div>
+
+<div class="card no-print">
+  <div class="order-head">
+    <div><div class="label" style="margin-bottom:8px">Order status</div>
+      <div class="status-steps">
+        {% for key, label in ORDER_STATUSES.items() if key != 'cancelled' %}
+        <form method="post" action="{{ url_for('admin.order_status', order_id=order.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="status" value="{{ key }}">
+          <button class="btn btn-sm {% if order.status == key %}is-current{% endif %}" type="submit" {% if order.status == key %}aria-pressed="true"{% endif %}>{{ label }}</button>
+        </form>
+        {% endfor %}
+      </div>
+    </div>
+    <div><div class="label" style="margin-bottom:8px">Payment</div>
+      <form method="post" action="{{ url_for('admin.order_payment', order_id=order.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if order.payment_status == 'paid' %}
+        <input type="hidden" name="paid" value="0">
+        <span class="pill pill-ok" style="margin-right:6px">{{ icon('check') }}Paid {{ order.paid_at|localtime('%d %b') }}</span>
+        <button class="btn btn-ghost btn-sm" type="submit">Undo</button>
+        {% else %}
+        <input type="hidden" name="paid" value="1">
+        <button class="btn btn-ok btn-sm" type="submit">{{ icon('money') }}Mark as paid</button>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+  {% if order.status == 'cancelled' %}<p class="hint" style="margin-top:10px">This order is cancelled. Tap a status above to bring it back.</p>{% endif %}
+</div>
+
+<div class="grid-2" style="margin-top:12px">
+  <section class="card">
+    <div class="card-head"><div><h2>What to make</h2></div>{{ m.status_pill(order.status) }}</div>
+    <div class="o-items">
+      {% for it in items %}
+      <div class="o-item">
+        {{ m.photo(it.image_file, it.product_name) }}
+        <div>
+          <div class="o-item-name">{{ it.qty }} × {{ it.product_name }}</div>
+          <div class="o-opts">
+            {% for o in options[it.id] %}<span><b>{{ o.group }}:</b> {{ o.value }}</span>{% endfor %}
+            {% if it.sku %}<span class="muted">{{ it.sku }}</span>{% endif %}
+          </div>
+        </div>
+        <div class="row-end"><span class="row-amount">{{ it.line_total_cents|rands }}</span>
+          {% if it.qty > 1 %}<span class="hint">{{ it.unit_price_cents|rands }} each</span>{% endif %}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="o-totals">
+      <div><span>Items</span><span class="num">{{ order.subtotal_cents|rands }}</span></div>
+      <div><span>{{ 'Delivery' if order.fulfilment == 'delivery' else 'Collection' }}</span>
+        <span class="num">{% if order.fulfilment == 'collect' %}Free{% elif order.delivery_quote %}Not agreed yet{% else %}{{ order.delivery_cents|rands }}{% endif %}</span></div>
+      <div class="grand"><span>Total</span><span class="num">{{ order.total_cents|rands }}</span></div>
+    </div>
+  </section>
+
+  <div>
+    <section class="card">
+      <div class="card-head"><div><h2>Customer</h2></div></div>
+      <div class="contact-list">
+        {% if wa_link(order.phone) %}<a href="{{ wa_link(order.phone, 'Hi ' ~ order.customer_name.split()[0] ~ ', this is Rooi Nooi about your order ' ~ order.id ~ '.') }}" target="_blank" rel="noopener">{{ icon('whatsapp') }}WhatsApp {{ order.phone }}</a>{% endif %}
+        <a href="{{ tel_link(order.phone) }}">{{ icon('phone') }}Call {{ order.phone }}</a>
+        {% if order.email %}<a href="mailto:{{ order.email }}?subject={{ ('Your Rooi Nooi order ' ~ order.id)|urlencode }}">{{ icon('mail') }}{{ order.email }}</a>{% endif %}
+      </div>
+      <div style="margin-top:14px">
+        <div class="label">{{ 'Delivery to' if order.fulfilment == 'delivery' else 'Collecting' }}</div>
+        {% if order.fulfilment == 'delivery' %}<p style="white-space:pre-line">{{ order.address }}</p>{% else %}<p class="muted">The customer will collect.</p>{% endif %}
+      </div>
+      {% if order.customer_note %}
+      <div style="margin-top:14px"><div class="label">Their note</div><p class="note-box">{{ order.customer_note }}</p></div>
+      {% endif %}
+    </section>
+
+    <form class="card no-print" method="post" action="{{ url_for('admin.order_edit', order_id=order.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="card-head"><div><h2>Your notes</h2><p>Only you see these.</p></div></div>
+      {% if order.fulfilment == 'delivery' %}
+      <label class="field"><span class="label">Delivery cost</span>
+        <span class="input-prefix"><span>R</span><input class="input" type="text" name="delivery_fee" value="{{ '' if order.delivery_quote else (order.delivery_cents|money_input) }}" inputmode="decimal" placeholder="e.g. 80.00"></span>
+        <span class="hint">Added to the order total once you have agreed it with the customer.</span></label>
+      {% endif %}
+      <label class="field"><span class="sr-only">Notes</span>
+        <textarea class="textarea" name="admin_note" rows="3" maxlength="2000" placeholder="e.g. paid by EFT on Monday">{{ order.admin_note or '' }}</textarea></label>
+      <button class="btn btn-primary btn-sm" type="submit">{{ icon('check') }}Save</button>
+    </form>
+
+    <section class="card no-print">
+      <div class="card-head"><div><h2>Customer's order page</h2><p>Send this link so they can see their order and its progress.</p></div></div>
+      <div class="copy-row">
+        <input class="input" id="customer-link" type="text" value="{{ customer_link }}" readonly aria-label="Link to the customer's order page">
+        <button class="btn btn-sm" type="button" data-copy="customer-link">{{ icon('copy') }}Copy</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+{% if order.status != 'cancelled' %}
+<section class="danger-zone card no-print">
+  <div class="card-head"><div><h2>Cancel this order</h2><p>It stays in your list under Cancelled and stops counting in your totals.</p></div></div>
+  <form method="post" action="{{ url_for('admin.order_status', order_id=order.id) }}" data-confirm="Cancel order {{ order.id }}?">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="status" value="cancelled">
+    <button class="btn btn-danger" type="submit">{{ icon('x') }}Cancel order</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

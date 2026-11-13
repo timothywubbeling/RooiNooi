@@ -1,0 +1,10 @@
+{% extends "store/layout.html" %}
+{% block title %}{{ code }} · {{ S.store_name if S else 'Rooi Nooi' }}{% endblock %}
+{% block content %}
+<section class="page-hero">
+  <p class="kicker">Oops · {{ code }}</p>
+  <h1 class="h-serif">Something's <em class="script">missing</em></h1>
+  <p class="lede">{{ message }}</p>
+  <p style="margin-top:22px"><a class="btn btn-wine" href="{{ url_for('store.home') }}">Back to the shop</a></p>
+</section>
+{% endblock %}

@@ -1,0 +1,11 @@
+{% macro card(p, labels) -%}
+<a class="pcard" href="{{ url_for('store.product', slug=p.slug) }}">
+  <span class="pcard-img">
+    {%- if p.image %}<img src="{{ img(p.image) }}" alt="{{ p.name }}" loading="lazy" decoding="async">{% endif -%}
+    {%- if p.status == 'soldout' %}<span class="badge">Sold out</span>{% endif -%}
+  </span>
+  <span class="pcard-name">{{ p.name }}</span>
+  {%- if p.summary %}<span class="pcard-sub">{{ p.summary }}</span>{% endif %}
+  <span class="pcard-price">{{ labels[p.id] }}</span>
+</a>
+{%- endmacro %}
