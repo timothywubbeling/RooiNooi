@@ -10,7 +10,7 @@ on **AWS Lambda**.
 ## How it is hosted
 
 ```
-GitHub (timothywubbeling/RooiNooi)
+GitHub (timothywubbeling/RooiNooiEcommerceStore)
    │  push to main
    ▼
 GitHub Actions ── runs the tests ── builds the package ── updates the Lambda
