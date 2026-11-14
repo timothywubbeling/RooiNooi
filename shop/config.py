@@ -21,9 +21,14 @@ DEFAULTS = {
     "database_url": "",           # empty = local SQLite file data/shop.db
     "flask_secret": "",           # empty = generated once and kept in the database
     "utc_offset_hours": 2,        # South Africa: UTC+2, no daylight saving
-    # Yoco goes here later (a separate Yoco account from the vending machine).
+    # Rooi Nooi's own Yoco account (not the vending machine's). Set YOCO_SECRET_KEY in the
+    # Lambda's environment variables; without it orders are paid manually.
     "yoco_secret_key": "",
     "yoco_webhook_secret": "",
+    "fake_payments": False,       # dev/tests only: a pretend Yoco page on /dev/fake-pay
+    # PUDO (The Courier Guy lockers) API key from the PUDO portal: Settings > API Keys.
+    "pudo_api_key": "",
+    "fake_pudo": False,           # dev/tests only: a pretend PUDO with three lockers
 }
 
 ENV = {
@@ -34,6 +39,9 @@ ENV = {
     "utc_offset_hours": ("SHOP_UTC_OFFSET", float),
     "yoco_secret_key": ("YOCO_SECRET_KEY", str),
     "yoco_webhook_secret": ("YOCO_WEBHOOK_SECRET", str),
+    "fake_payments": ("SHOP_FAKE_PAYMENTS", lambda v: str(v).strip().lower() in ("1", "true", "yes", "on")),
+    "pudo_api_key": ("PUDO_API_KEY", str),
+    "fake_pudo": ("SHOP_FAKE_PUDO", lambda v: str(v).strip().lower() in ("1", "true", "yes", "on")),
 }
 
 

@@ -139,6 +139,16 @@ CREATE TABLE IF NOT EXISTS settings (
 )
 """
 
+# Columns added after the first release. CREATE TABLE IF NOT EXISTS leaves existing tables
+# alone, so a database made by an older version gets them added in init().
+ADDED_COLUMNS = [
+    ("orders", "pudo_terminal", "TEXT"),
+    ("orders", "pudo_shipment_id", "TEXT"),
+    ("orders", "pudo_waybill", "TEXT"),
+    ("orders", "pudo_pin", "TEXT"),
+    ("orders", "pudo_status", "TEXT"),
+]
+
 TABLES = ("categories", "products", "product_images", "option_groups", "option_values",
           "orders", "order_items", "media", "settings")
 INT_ID_TABLES = {"categories", "products", "product_images", "option_groups", "option_values", "order_items"}
@@ -166,9 +176,19 @@ SETTING_DEFAULTS = {
     "hero_right": "",
     "collect_enabled": "1",
     "collect_note": "Collect from us in Garsfontein, Pretoria. We'll let you know when your order is ready.",
+    "pudo_enabled": "1",
+    "pudo_fee": "",
+    "pudo_note": "Sent to the PUDO locker of your choice. You'll get an SMS with a PIN to collect it.",
+    "pudo_size": "S",
     "delivery_enabled": "1",
     "delivery_fee": "",
     "delivery_note": "We deliver in Pretoria. We'll confirm the delivery cost with you.",
+    "order_message": ("Thank you for your order! We'll let you know on WhatsApp or email as soon as it's "
+                      "ready."),
+}
+
+# Settings whose old default text no longer fits (they get the new default unless they were edited).
+OLD_DEFAULTS = {
     "order_message": ("Thank you for your order! Online card payments are coming soon, so for now we'll "
                       "contact you on WhatsApp or email to confirm your order and arrange payment."),
 }
@@ -312,6 +332,10 @@ class Database:
                     conn.execute("PRAGMA journal_mode = WAL")
                     conn.executescript(SCHEMA.format(pk="INTEGER PRIMARY KEY", blob="BLOB") + ";")
                     with conn:
+                        for table, column, ddl in ADDED_COLUMNS:
+                            have = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+                            if column not in have:
+                                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
                         self._defaults(conn)
                         conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
                     return
@@ -321,6 +345,8 @@ class Database:
                     for statement in ddl.split(";"):
                         if statement.strip():
                             conn.raw.execute(statement)
+                    for table, column, coltype in ADDED_COLUMNS:
+                        conn.raw.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {coltype}")
                     # Supabase publishes the public schema through its Data API. Lock these tables
                     # so only this app (the table owner) can read them, never the anon/public keys.
                     for table in TABLES:
@@ -338,6 +364,8 @@ class Database:
     def _defaults(self, conn):
         for key, value in SETTING_DEFAULTS.items():
             conn.execute("INSERT INTO settings(key, value) VALUES (?, ?) ON CONFLICT(key) DO NOTHING", (key, value))
+        for key, old in OLD_DEFAULTS.items():
+            conn.execute("UPDATE settings SET value = ? WHERE key = ? AND value = ?", (SETTING_DEFAULTS[key], key, old))
 
 
 # ── Settings ────────────────────────────────────────────────────────────────

@@ -10,6 +10,9 @@ from . import catalogue as cat
 from . import db as dbm
 from .helpers import local_now, local_to_utc_str, parse_money, public_base, services
 from .images import ImageError, is_stored, store_upload
+from .orders import mark_paid, refresh_payment
+from .payment import PaymentError
+from .pudo import SIZES as PUDO_SIZES, PudoError
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -121,7 +124,7 @@ def _period(start_local, end_local):
     row = g.db.execute(
         "SELECT COUNT(*) AS n, COALESCE(SUM(total_cents), 0) AS total, "
         "COALESCE(SUM(CASE WHEN payment_status = 'paid' THEN total_cents ELSE 0 END), 0) AS paid "
-        "FROM orders WHERE status != 'cancelled' AND created_at >= ? AND created_at < ?",
+        "FROM orders WHERE status NOT IN ('cancelled', 'pending') AND created_at >= ? AND created_at < ?",
         (local_to_utc_str(start_local), local_to_utc_str(end_local))).fetchone()
     return dict(row)
 
@@ -158,7 +161,7 @@ def dashboard():
     counts = {r["status"]: r["n"] for r in g.db.execute("SELECT status, COUNT(*) AS n FROM orders GROUP BY status")}
     unpaid = g.db.execute(
         "SELECT COUNT(*) AS n, COALESCE(SUM(total_cents), 0) AS total FROM orders "
-        "WHERE payment_status = 'unpaid' AND status != 'cancelled'").fetchone()
+        "WHERE payment_status = 'unpaid' AND status NOT IN ('cancelled', 'pending')").fetchone()
     open_orders = g.db.execute(
         ORDER_LIST_SQL + " WHERE o.status IN ('new', 'making', 'ready') "
         "ORDER BY CASE o.status WHEN 'new' THEN 0 WHEN 'making' THEN 1 ELSE 2 END, o.created_at LIMIT 12").fetchall()
@@ -500,7 +503,8 @@ ORDER_FILTERS = {
     "new": ("New", "o.status = 'new'"),
     "making": ("Making", "o.status = 'making'"),
     "ready": ("Ready", "o.status = 'ready'"),
-    "unpaid": ("Unpaid", "o.payment_status = 'unpaid' AND o.status != 'cancelled'"),
+    "unpaid": ("Unpaid", "o.payment_status = 'unpaid' AND o.status NOT IN ('cancelled', 'pending')"),
+    "pending": ("Awaiting card payment", "o.status = 'pending'"),
     "done": ("Done", "o.status = 'done'"),
     "cancelled": ("Cancelled", "o.status = 'cancelled'"),
     "all": ("All", "1 = 1"),
@@ -541,8 +545,11 @@ def order_detail(order_id):
     items = g.db.execute("SELECT * FROM order_items WHERE order_id = ? ORDER BY id", (order_id,)).fetchall()
     options = {i["id"]: cat.order_options(i) for i in items}
     link = url_for("store.order_page", order_id=order["id"], t=order["token"], _external=False)
+    svc = services()
     return render_template("admin/order_detail.html", order=order, items=items, options=options,
-                           customer_link=public_base() + link)
+                           customer_link=public_base() + link, pay_online=svc.payments.online,
+                           pudo_ready=svc.pudo is not None, pudo_sizes=PUDO_SIZES,
+                           pudo_size=dbm.get_setting(g.db, "pudo_size") or "S")
 
 
 @bp.post("/orders/<order_id>/status")
@@ -561,14 +568,77 @@ def order_status(order_id):
 @bp.post("/orders/<order_id>/payment")
 @auth.login_required
 def order_payment(order_id):
+    _get_order(order_id)
+    if request.form.get("paid") == "1":
+        mark_paid(g.db, order_id, how="manual")
+    else:
+        with g.db:
+            g.db.execute("UPDATE orders SET payment_status = 'unpaid', paid_at = NULL, updated_at = ? WHERE id = ?",
+                         (dbm.utcnow(), order_id))
+    flash(f"Order {order_id} marked as {'paid' if request.form.get('paid') == '1' else 'not paid'}.")
+    return redirect(url_for("admin.order_detail", order_id=order_id))
+
+
+@bp.post("/orders/<order_id>/check-payment")
+@auth.login_required
+def order_check_payment(order_id):
+    """Ask Yoco directly whether a card order was paid."""
+    order = refresh_payment(g.db, _get_order(order_id))
+    flash("Yoco says it is paid." if order["payment_status"] == "paid" else
+          "Yoco has no completed payment for this order yet.")
+    return redirect(url_for("admin.order_detail", order_id=order_id))
+
+
+@bp.post("/orders/<order_id>/pudo")
+@auth.login_required
+def order_pudo_book(order_id):
+    """Book the PUDO Locker-to-Locker shipment for this order."""
     order = _get_order(order_id)
-    paid = request.form.get("paid") == "1"
+    pudo = services().pudo
+    back = redirect(url_for("admin.order_detail", order_id=order_id) + "#shipping")
+    if pudo is None:
+        flash("PUDO is not connected yet. Add PUDO_API_KEY in the Lambda settings.")
+        return back
+    if order["pudo_shipment_id"]:
+        flash("This order already has a PUDO shipment.")
+        return back
+    terminal = _clean(request.form.get("terminal"), 20).upper()
+    size = request.form.get("size") if request.form.get("size") in PUDO_SIZES else None
+    if not terminal or not size:
+        flash("Choose the parcel size and the customer's locker code (e.g. CG54).")
+        return back
+    s = dbm.all_settings(g.db)
+    try:
+        if not pudo.locker(terminal):
+            flash(f"PUDO has no locker with the code {terminal}. Check the code.")
+            return back
+        shipment = pudo.create_shipment(order, terminal, size,
+                                        {"name": s.get("store_name"), "email": s.get("email"), "phone": s.get("phone")})
+    except PudoError as exc:
+        flash(str(exc))
+        return back
     with g.db:
         g.db.execute(
-            "UPDATE orders SET payment_status = ?, paid_at = ?, updated_at = ? WHERE id = ?",
-            ("paid" if paid else "unpaid", (order["paid_at"] or dbm.utcnow()) if paid else None, dbm.utcnow(), order_id))
-    flash(f"Order {order_id} marked as {'paid' if paid else 'not paid'}.")
-    return redirect(url_for("admin.order_detail", order_id=order_id))
+            "UPDATE orders SET pudo_terminal = ?, pudo_shipment_id = ?, pudo_waybill = ?, pudo_pin = ?, "
+            "pudo_status = ?, status = CASE WHEN status IN ('new', 'making') THEN 'ready' ELSE status END, "
+            "updated_at = ? WHERE id = ?",
+            (terminal, shipment["id"], shipment["waybill"], shipment["pin"], shipment["status"], dbm.utcnow(), order_id))
+    flash(f"PUDO shipment booked: waybill {shipment['waybill']}. Drop it in any PUDO locker with PIN {shipment['pin']}.")
+    return back
+
+
+@bp.get("/orders/<order_id>/pudo/label")
+@auth.login_required
+def order_pudo_label(order_id):
+    order = _get_order(order_id)
+    pudo = services().pudo
+    if pudo is None or not order["pudo_shipment_id"]:
+        abort(404)
+    try:
+        return redirect(pudo.label_url(order["pudo_shipment_id"]))
+    except PudoError as exc:
+        flash(str(exc))
+        return redirect(url_for("admin.order_detail", order_id=order_id) + "#shipping")
 
 
 @bp.post("/orders/<order_id>/edit")
@@ -579,7 +649,7 @@ def order_edit(order_id):
     note = _text(request.form.get("admin_note"), 2000)
     delivery = order["delivery_cents"]
     quote = order["delivery_quote"]
-    if order["fulfilment"] == "delivery" and "delivery_fee" in request.form:
+    if order["fulfilment"] in ("delivery", "pudo") and "delivery_fee" in request.form:
         fee = parse_money(request.form.get("delivery_fee"))
         if fee is None:
             flash("Enter the delivery cost like 80.00")
@@ -598,9 +668,9 @@ SETTING_FIELDS = {
     "shop": {"store_name": 40, "tagline": 80, "announcement": 140, "meta_description": 300},
     "contact": {"phone": 30, "whatsapp": 30, "email": 120, "address": 200, "instagram": 200, "facebook": 200},
     "home": {"hero_kicker": 40, "hero_title": 30, "hero_script": 30, "about": 1200},
-    "orders": {"collect_note": 300, "delivery_note": 300, "order_message": 800},
+    "orders": {"collect_note": 300, "pudo_note": 300, "delivery_note": 300, "order_message": 800},
 }
-SWITCHES = {"shop": ["store_open"], "orders": ["collect_enabled", "delivery_enabled"]}
+SWITCHES = {"shop": ["store_open"], "orders": ["collect_enabled", "pudo_enabled", "delivery_enabled"]}
 MULTILINE = {"about", "order_message", "address"}
 
 
@@ -621,12 +691,14 @@ def settings():
         if section == "shop" and not updates["store_name"]:
             errors.append("The shop needs a name.")
         if section == "orders":
-            fee = request.form.get("delivery_fee", "").strip()
-            if fee and parse_money(fee) is None:
-                errors.append("Enter the delivery fee like 80.00, or leave it empty to quote each order.")
-            updates["delivery_fee"] = f"{parse_money(fee) / 100:.2f}" if fee and parse_money(fee) is not None else ""
-            if updates["collect_enabled"] == "0" and updates["delivery_enabled"] == "0":
-                errors.append("Switch on collection, delivery or both, otherwise nobody can check out.")
+            for key, label in (("pudo_fee", "PUDO fee"), ("delivery_fee", "delivery fee")):
+                fee = request.form.get(key, "").strip()
+                if fee and parse_money(fee) is None:
+                    errors.append(f"Enter the {label} like 80.00, or leave it empty to quote each order.")
+                updates[key] = f"{parse_money(fee) / 100:.2f}" if fee and parse_money(fee) is not None else ""
+            updates["pudo_size"] = request.form.get("pudo_size") if request.form.get("pudo_size") in PUDO_SIZES else "S"
+            if "1" not in (updates["collect_enabled"], updates["pudo_enabled"], updates["delivery_enabled"]):
+                errors.append("Switch on at least one of collection, PUDO or delivery, otherwise nobody can check out.")
         if section == "home":
             for key in ("hero_left", "hero_right"):
                 upload = request.files.get(key)
@@ -642,5 +714,50 @@ def settings():
             flash("Settings saved.")
             return redirect(url_for("admin.settings") + f"#{section}")
     svc = services()
-    return render_template("admin/settings.html", s=dbm.all_settings(g.db), errors=errors,
-                           payments=svc.payments, base_url=public_base())
+    s = dbm.all_settings(g.db)
+    hidden = []
+    if svc.payments.online:
+        for key, label in (("pudo", "PUDO"), ("delivery", "Delivery")):
+            if s.get(f"{key}_enabled") == "1" and not (s.get(f"{key}_fee") or "").strip():
+                hidden.append(label)
+    return render_template("admin/settings.html", s=s, errors=errors, payments=svc.payments,
+                           base_url=public_base(), pudo=svc.pudo, pudo_sizes=PUDO_SIZES, hidden_ways=hidden,
+                           webhook_on=bool(s.get("yoco_webhook_secret") or svc.cfg.get("yoco_webhook_secret")))
+
+
+@bp.post("/yoco/connect")
+@auth.login_required
+def yoco_connect():
+    """Register this shop's webhook with Yoco and keep the signing secret it returns."""
+    payments = services().payments
+    if not payments.online:
+        flash("Add YOCO_SECRET_KEY in the Lambda settings first.")
+        return redirect(url_for("admin.settings") + "#payments")
+    url = public_base() + url_for("store.yoco_webhook")
+    try:
+        hook_id, secret = payments.register_webhook(url)
+    except PaymentError as exc:
+        flash(f"Could not connect payment notifications: {exc}")
+        return redirect(url_for("admin.settings") + "#payments")
+    with g.db:
+        dbm.set_setting(g.db, "yoco_webhook_secret", secret)
+        dbm.set_setting(g.db, "yoco_webhook_id", hook_id)
+    flash("Payment notifications connected. Yoco will now tell the shop the moment a payment goes through.")
+    return redirect(url_for("admin.settings") + "#payments")
+
+
+@bp.get("/api/pudo/rates")
+@auth.login_required
+def api_pudo_rates():
+    """Current PUDO Locker-to-Locker prices, to help set the shipping fee."""
+    pudo = services().pudo
+    if pudo is None:
+        return _json_error("PUDO is not connected yet.")
+    try:
+        lockers = pudo.lockers()
+        if not lockers:
+            return _json_error("PUDO returned no lockers.")
+        target = next((l for l in lockers if "pretoria" in l["town"].lower()), lockers[0])
+        return jsonify({"to": f"{target['name']} ({target['code']})", "rates": pudo.rates(target["code"])})
+    except PudoError as exc:
+        return _json_error(str(exc))

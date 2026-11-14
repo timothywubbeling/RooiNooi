@@ -31,16 +31,23 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         {% if order.payment_status == 'paid' %}
         <input type="hidden" name="paid" value="0">
-        <span class="pill pill-ok" style="margin-right:6px">{{ icon('check') }}Paid {{ order.paid_at|localtime('%d %b') }}</span>
+        <span class="pill pill-ok" style="margin-right:6px">{{ icon('check') }}Paid {{ order.paid_at|localtime('%d %b') }}{% if order.payment_method == 'yoco' %} by card{% endif %}</span>
         <button class="btn btn-ghost btn-sm" type="submit">Undo</button>
         {% else %}
         <input type="hidden" name="paid" value="1">
         <button class="btn btn-ok btn-sm" type="submit">{{ icon('money') }}Mark as paid</button>
         {% endif %}
       </form>
+      {% if order.payment_status != 'paid' and order.checkout_id and pay_online %}
+      <form method="post" action="{{ url_for('admin.order_check_payment', order_id=order.id) }}" style="margin-top:8px">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-ghost btn-sm" type="submit">{{ icon('card') }}Check with Yoco</button>
+      </form>
+      {% endif %}
     </div>
   </div>
   {% if order.status == 'cancelled' %}<p class="hint" style="margin-top:10px">This order is cancelled. Tap a status above to bring it back.</p>{% endif %}
+  {% if order.status == 'pending' %}<p class="hint" style="margin-top:10px">The customer has not finished paying by card yet. It becomes a New order by itself once Yoco confirms the payment.</p>{% endif %}
 </div>
 
 <div class="grid-2" style="margin-top:12px">
@@ -64,7 +71,7 @@
     </div>
     <div class="o-totals">
       <div><span>Items</span><span class="num">{{ order.subtotal_cents|rands }}</span></div>
-      <div><span>{{ 'Delivery' if order.fulfilment == 'delivery' else 'Collection' }}</span>
+      <div><span>{{ {'delivery': 'Delivery', 'pudo': 'PUDO'}.get(order.fulfilment, 'Collection') }}</span>
         <span class="num">{% if order.fulfilment == 'collect' %}Free{% elif order.delivery_quote %}Not agreed yet{% else %}{{ order.delivery_cents|rands }}{% endif %}</span></div>
       <div class="grand"><span>Total</span><span class="num">{{ order.total_cents|rands }}</span></div>
     </div>
@@ -79,19 +86,52 @@
         {% if order.email %}<a href="mailto:{{ order.email }}?subject={{ ('Your Rooi Nooi order ' ~ order.id)|urlencode }}">{{ icon('mail') }}{{ order.email }}</a>{% endif %}
       </div>
       <div style="margin-top:14px">
-        <div class="label">{{ 'Delivery to' if order.fulfilment == 'delivery' else 'Collecting' }}</div>
-        {% if order.fulfilment == 'delivery' %}<p style="white-space:pre-line">{{ order.address }}</p>{% else %}<p class="muted">The customer will collect.</p>{% endif %}
+        <div class="label">{{ {'delivery': 'Delivery to', 'pudo': 'PUDO locker'}.get(order.fulfilment, 'Collecting') }}</div>
+        {% if order.fulfilment in ('delivery', 'pudo') %}<p style="white-space:pre-line">{{ order.address }}</p>{% else %}<p class="muted">The customer will collect.</p>{% endif %}
       </div>
       {% if order.customer_note %}
       <div style="margin-top:14px"><div class="label">Their note</div><p class="note-box">{{ order.customer_note }}</p></div>
       {% endif %}
     </section>
 
+    {% if order.fulfilment == 'pudo' %}
+    <section class="card" id="shipping">
+      <div class="card-head"><div><h2>PUDO shipment</h2>
+        <p>{% if order.pudo_shipment_id %}Booked. Drop the parcel in any PUDO locker using the PIN.{% else %}Locker to locker: you drop it at any PUDO locker, it goes to the customer's locker.{% endif %}</p></div></div>
+      {% if order.pudo_shipment_id %}
+      <div class="contact-list">
+        <span><b>Waybill:</b> {{ order.pudo_waybill or '–' }}</span>
+        <span><b>Drop-off PIN:</b> <span style="font-size:1.2rem;font-weight:700;letter-spacing:.1em">{{ order.pudo_pin or '–' }}</span></span>
+        <span><b>To locker:</b> {{ order.pudo_terminal }}</span>
+      </div>
+      {% if pudo_ready %}<a class="btn btn-sm no-print" style="margin-top:12px" href="{{ url_for('admin.order_pudo_label', order_id=order.id) }}" target="_blank" rel="noopener">{{ icon('print') }}Waybill label (PDF)</a>{% endif %}
+      {% elif pudo_ready %}
+      <form method="post" action="{{ url_for('admin.order_pudo_book', order_id=order.id) }}" class="no-print"
+            data-confirm="Book a PUDO shipment for {{ order.id }}? PUDO charges your account for it.">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-row">
+          <label class="field"><span class="label">Parcel size</span>
+            <select class="select" name="size">
+              {% for code, label in pudo_sizes.items() %}<option value="{{ code }}" {% if code == pudo_size %}selected{% endif %}>{{ code }} · {{ label }}</option>{% endfor %}
+            </select></label>
+          <label class="field"><span class="label">Customer's locker code</span>
+            <input class="input" type="text" name="terminal" value="{{ order.pudo_terminal or '' }}" maxlength="20" placeholder="e.g. CG54" required>
+            {% if not order.pudo_terminal %}<span class="hint">The customer typed: {{ order.address }}. Find its code in the PUDO portal.</span>{% endif %}</label>
+        </div>
+        {% if order.payment_status != 'paid' %}<p class="hint" style="margin-bottom:10px">This order is not paid yet.</p>{% endif %}
+        <button class="btn btn-primary btn-sm" type="submit">{{ icon('truck') }}Book PUDO shipment</button>
+      </form>
+      {% else %}
+      <p class="hint">Connect PUDO (PUDO_API_KEY) to book from here, or book it in the PUDO portal.</p>
+      {% endif %}
+    </section>
+    {% endif %}
+
     <form class="card no-print" method="post" action="{{ url_for('admin.order_edit', order_id=order.id) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="card-head"><div><h2>Your notes</h2><p>Only you see these.</p></div></div>
-      {% if order.fulfilment == 'delivery' %}
-      <label class="field"><span class="label">Delivery cost</span>
+      {% if order.fulfilment in ('delivery', 'pudo') %}
+      <label class="field"><span class="label">{{ 'PUDO' if order.fulfilment == 'pudo' else 'Delivery' }} cost</span>
         <span class="input-prefix"><span>R</span><input class="input" type="text" name="delivery_fee" value="{{ '' if order.delivery_quote else (order.delivery_cents|money_input) }}" inputmode="decimal" placeholder="e.g. 80.00"></span>
         <span class="hint">Added to the order total once you have agreed it with the customer.</span></label>
       {% endif %}

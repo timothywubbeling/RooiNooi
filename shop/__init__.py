@@ -12,7 +12,8 @@ from . import auth
 from . import db as dbm
 from .config import SEED_DIR, load_config
 from .helpers import register_filters
-from .payment import ManualPayments
+from .payment import build_payments
+from .pudo import build_pudo
 from .ratelimit import RateLimiter
 from .seed import seed_if_empty
 
@@ -68,7 +69,7 @@ def create_app(cfg=None):
     app.config["SECRET_KEY"] = secret
 
     app.extensions["shop"] = SimpleNamespace(
-        cfg=cfg, db=database, payments=ManualPayments(),
+        cfg=cfg, db=database, payments=build_payments(cfg), pudo=build_pudo(cfg),
         build=_static_build_id(), version=VERSION,
         login_limiter=RateLimiter(5, 600),     # 5 wrong passwords -> 10 minute lockout
         order_limiter=RateLimiter(8, 600),     # 8 orders per 10 minutes per address
@@ -90,7 +91,7 @@ def create_app(cfg=None):
         resp.headers.setdefault("X-Content-Type-Options", "nosniff")
         resp.headers.setdefault("Referrer-Policy", "same-origin")
         resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
-        if request.path.startswith(("/admin", "/order/", "/api/")):
+        if request.path.startswith(("/admin", "/order/", "/api/")) and "Cache-Control" not in resp.headers:
             resp.headers["Cache-Control"] = "no-store"
         return resp
 

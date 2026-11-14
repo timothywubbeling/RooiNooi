@@ -4,8 +4,14 @@
 {% block content %}
 {% set steps = [('new', 'Received'), ('making', 'Being made'), ('ready', 'Ready'), ('done', 'Done')] %}
 {% set step_ids = steps|map(attribute=0)|list %}
+{% set paid = order.payment_status == 'paid' %}
+{% set waiting = order.status == 'pending' and not paid %}
+{% set how = {'delivery': 'Delivery', 'pudo': 'PUDO locker'}.get(order.fulfilment, 'Collection') %}
 <section class="page-hero page-hero-slim">
-  {% if just_placed %}
+  {% if waiting %}
+  <p class="kicker">Almost there</p>
+  <h1 class="h-serif">Complete your <span class="script">payment</span></h1>
+  {% elif just_placed %}
   <p class="kicker">Order received</p>
   <h1 class="h-serif">Thank you, <span class="script">{{ order.customer_name.split()[0] }}</span></h1>
   {% else %}
@@ -18,7 +24,7 @@
 <div class="order-wrap">
   {% if order.status == 'cancelled' %}
   <div class="notice">{{ icon('x') }}<span>This order was cancelled. Contact us if that's unexpected.</span></div>
-  {% else %}
+  {% elif order.status in step_ids %}
   <ol class="track" aria-label="Order progress">
     {% for id, label in steps %}
     <li class="{{ 'is-done' if loop.index0 <= step_ids.index(order.status) }}"><span class="track-dot">{{ icon('check') }}</span>{{ label }}</li>
@@ -26,10 +32,19 @@
   </ol>
   {% endif %}
 
-  {% if order.payment_status == 'paid' %}
-  <div class="pay-note pay-ok">{{ icon('check') }}<p><strong>Paid.</strong> Thank you!</p></div>
+  {% if paid %}
+  <div class="pay-note pay-ok">{{ icon('check') }}<p><strong>Paid.</strong> {{ S.order_message }}</p></div>
+  {% elif waiting %}
+  <div class="pay-note">{{ icon('card') }}<p>
+    {% if pay_error %}We couldn't open the card payment page just now. Please try again.
+    {% elif cancelled %}Your payment was cancelled, so nothing was charged. Your order is saved; you can pay now.
+    {% elif failed or came_back_unpaid %}Your payment didn't go through, so nothing was charged. Please try again.
+    {% else %}We've saved your order. It's confirmed as soon as your card payment goes through.{% endif %}</p></div>
+  <form method="post" action="{{ url_for('store.order_pay', order_id=order.id, t=order.token) }}">
+    <button class="btn btn-wine btn-block btn-lg" type="submit">{{ icon('card') }}Pay {{ order.total_cents|rands }} by card</button>
+  </form>
   {% elif order.status != 'cancelled' %}
-  <div class="pay-note">{{ icon('card') }}<p>{{ S.order_message }}</p></div>
+  <div class="pay-note">{{ icon('card') }}<p>{{ S.order_message }} We'll contact you on WhatsApp or email to arrange payment.</p></div>
   {% endif %}
 
   <section class="co-card">
@@ -48,15 +63,19 @@
     </ul>
     <dl class="totals">
       <div><dt>Subtotal</dt><dd>{{ order.subtotal_cents|rands }}</dd></div>
-      <div><dt>{{ 'Delivery' if order.fulfilment == 'delivery' else 'Collection' }}</dt>
+      <div><dt>{{ how }}</dt>
         <dd>{% if order.fulfilment == 'collect' %}Free{% elif order.delivery_quote %}To be confirmed{% else %}{{ order.delivery_cents|rands }}{% endif %}</dd></div>
       <div class="grand"><dt>Total</dt><dd>{{ order.total_cents|rands }}{% if order.delivery_quote %} + delivery{% endif %}</dd></div>
     </dl>
   </section>
 
   <section class="co-card">
-    <h2>{{ 'Delivery to' if order.fulfilment == 'delivery' else 'Collection' }}</h2>
-    {% if order.fulfilment == 'delivery' %}<p class="pre">{{ order.address }}</p>{% else %}<p>{{ S.collect_note }}</p>{% endif %}
+    <h2>{{ {'delivery': 'Delivery to', 'pudo': 'Sending to PUDO locker'}.get(order.fulfilment, 'Collection') }}</h2>
+    {% if order.fulfilment in ('delivery', 'pudo') %}<p class="pre">{{ order.address }}</p>{% else %}<p>{{ S.collect_note }}</p>{% endif %}
+    {% if order.fulfilment == 'pudo' %}
+      {% if order.pudo_waybill %}<p style="margin-top:8px"><strong>PUDO tracking number:</strong> {{ order.pudo_waybill }}</p>{% endif %}
+      <p class="muted" style="margin-top:8px">{{ S.pudo_note }}</p>
+    {% endif %}
     <p class="muted" style="margin-top:8px">{{ order.customer_name }} · {{ order.phone }}{% if order.email %} · {{ order.email }}{% endif %}</p>
   </section>
 
@@ -67,4 +86,4 @@
   <p class="muted center small">Bookmark this page to check on your order later.</p>
 </div>
 {% endblock %}
-{% block scripts %}{% if just_placed %}<script>window.RN && RN.clear();</script>{% endif %}{% endblock %}
+{% block scripts %}{% if just_placed or paid or waiting %}<script>window.RN && RN.clear();</script>{% endif %}{% endblock %}

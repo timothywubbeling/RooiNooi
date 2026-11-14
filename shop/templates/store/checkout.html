@@ -20,12 +20,12 @@
     </section>
 
     <section class="co-card">
-      <h2><span class="co-n">2</span>Collection or delivery</h2>
+      <h2><span class="co-n">2</span>How do you want it?</h2>
       <div class="ways">
         {% for w in ways %}
         <label class="way">
-          <input type="radio" name="fulfilment" value="{{ w.id }}" data-fee="{{ w.fee_cents }}" data-quote="{{ 1 if w.quote else 0 }}" {% if loop.first %}checked{% endif %}>
-          <span class="way-icon">{{ icon('store' if w.id == 'collect' else 'truck') }}</span>
+          <input type="radio" name="fulfilment" value="{{ w.id }}" data-fee="{{ w.fee_cents }}" data-quote="{{ 1 if w.quote else 0 }}" data-needs="{{ w.needs or '' }}" {% if loop.first %}checked{% endif %}>
+          <span class="way-icon">{{ icon({'collect': 'store', 'pudo': 'box'}.get(w.id, 'truck')) }}</span>
           <span class="way-body"><strong>{{ w.label }}</strong>{% if w.note %}<span>{{ w.note }}</span>{% endif %}</span>
           <span class="way-fee">{% if w.id == 'collect' %}Free{% elif w.quote %}To be confirmed{% else %}{{ w.fee_cents|rands }}{% endif %}</span>
         </label>
@@ -33,6 +33,19 @@
       </div>
       <label class="fld" id="address-field" hidden><span class="fld-label">Delivery address</span>
         <textarea class="field" name="address" rows="3" autocomplete="street-address" maxlength="400"></textarea></label>
+      <div class="fld" id="locker-field" hidden>
+        <label class="fld-label" for="locker-input">Which PUDO locker?</label>
+        {% if pudo_ready %}
+        <input class="field" id="locker-input" type="search" autocomplete="off" placeholder="Search by suburb, town or shopping centre">
+        <div class="locker-results" id="locker-results" role="listbox" aria-label="PUDO lockers"></div>
+        <p class="locker-picked" id="locker-picked" hidden></p>
+        <input type="hidden" name="locker">
+        {% else %}
+        <input class="field" id="locker-input" name="locker" type="text" maxlength="200" placeholder="e.g. Engen Garsfontein, Pretoria">
+        {% endif %}
+        <input type="hidden" name="locker_code">
+        <span class="hint-text">Not sure? <a href="{{ pudo_finder }}" target="_blank" rel="noopener">Find your nearest PUDO locker</a>.</span>
+      </div>
     </section>
 
     <section class="co-card">
@@ -41,9 +54,13 @@
         <textarea class="field" name="note" rows="3" maxlength="600" placeholder="e.g. the date you need your order by"></textarea></label>
     </section>
 
-    <div class="pay-note">{{ icon('card') }}<p>{{ S.order_message }}</p></div>
+    {% if online %}
+    <div class="pay-note">{{ icon('lock') }}<p>Next you'll pay securely by card on Yoco's payment page, then come straight back here.</p></div>
+    {% else %}
+    <div class="pay-note">{{ icon('card') }}<p>After you place your order we'll contact you on WhatsApp or email to arrange payment.</p></div>
+    {% endif %}
     <p class="form-error" id="co-error" role="alert" hidden></p>
-    <button class="btn btn-wine btn-block btn-lg" type="submit" id="co-submit" disabled>Place order</button>
+    <button class="btn btn-wine btn-block btn-lg" type="submit" id="co-submit" data-label="{{ 'Continue to payment' if online else 'Place order' }}" disabled>{{ 'Continue to payment' if online else 'Place order' }}</button>
     {% if not store_open %}<p class="form-error">We're not taking orders right now.</p>{% endif %}
   </form>
 

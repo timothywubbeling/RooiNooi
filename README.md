@@ -94,12 +94,51 @@ rooi-nooi-shop/
 - **Settings**: shop name, top banner, contact details, home-page banner words and
   photos, About text, collection / delivery, the message shown after ordering, password.
 
-## Payments
+## Payments (Yoco)
 
-Not connected yet. Orders arrive as **Unpaid**; Rooi Nooi arranges payment and taps
-**Mark as paid**. Yoco will be added on **Rooi Nooi's own Yoco account** using the same
-flow as the vending machine; `shop/payment.py` explains where each piece goes. The Yoco
-secret key will go in the Lambda's environment variables (`YOCO_SECRET_KEY`).
+Card payments use **Rooi Nooi's own Yoco account** (not the vending machine's), the same
+flow as the vending machine (`shop/payment.py`, `shop/orders.py`).
+
+1. In Yoco: **Selling Online → Payment Gateway**, copy the **secret key** (`sk_live_…`,
+   or `sk_test_…` to try it with test cards first).
+2. In AWS Lambda `rooi-nooi-shop` → **Configuration → Environment variables**, add
+   `YOCO_SECRET_KEY` with that key. Save.
+3. In the shop admin → **Settings → Payments**, tap **Connect payment notifications**.
+   The shop registers its webhook with Yoco and keeps the signing secret in the database.
+
+How it works: checkout saves the order as **Awaiting card payment**, sends the customer
+to Yoco, and Yoco's signed webhook (or a status check when the customer comes back) marks
+it paid. Only then does it show up as a **New** order. Unfinished payments stay under
+Orders → *Awaiting card payment*; the customer can pay later from their order page.
+
+Without `YOCO_SECRET_KEY` the shop falls back to manual payment: orders arrive **Unpaid**
+and you tap **Mark as paid**.
+
+With card payments on, a shipping option whose fee is "to be confirmed" is hidden at
+checkout, because the full amount is charged up front. Set a fixed fee to offer it.
+
+## Shipping (PUDO)
+
+Customers can choose **PUDO locker**: they pick their locker, pay the PUDO fee you set in
+Settings, and you send it **locker to locker** (you drop the parcel in any PUDO locker).
+
+1. In the PUDO / Courier Guy portal: **Settings → API Keys**, create a key.
+2. In AWS Lambda → Environment variables, add `PUDO_API_KEY`.
+3. In the admin → **Settings**, set the PUDO fee (**Check PUDO's prices** shows the
+   current rates) and your usual parcel size.
+
+Then customers search real PUDO lockers at checkout, and on each paid order you tap
+**Book PUDO shipment**: the shop gets the waybill number and the **drop-off PIN**, and
+**Waybill label (PDF)** opens the label to print. The customer sees the tracking number
+on their order page and gets PUDO's SMS when it arrives.
+
+Without `PUDO_API_KEY` customers type their locker by name and you book in the portal.
+
+## Local testing
+
+`SHOP_FAKE_PAYMENTS=1` and `SHOP_FAKE_PUDO=1` switch on a pretend Yoco page and a pretend
+PUDO with three lockers, for trying the whole flow without real money or shipments. The
+tests use them too.
 
 ## Limits to know about
 

@@ -1,6 +1,22 @@
 {% extends "admin/base.html" %}
 {% import "admin/_macros.html" as m %}
 {% block title %}Settings · Admin{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var b = document.getElementById("pudo-rates"), out = document.getElementById("pudo-rates-out");
+  if (!b) return;
+  b.addEventListener("click", function () {
+    out.hidden = false; out.textContent = "Asking PUDO…";
+    fetch("/admin/api/pudo/rates").then(function (r) { return r.json(); }).then(function (d) {
+      if (d.error) { out.textContent = d.error; return; }
+      out.textContent = "Locker to locker, to " + d.to + ": " + d.rates.map(function (r) {
+        return (r.name || r.code).replace("Locker to Locker ", "") + " R" + r.rate; }).join(" · ");
+    }).catch(function () { out.textContent = "Could not reach PUDO."; });
+  });
+})();
+</script>
+{% endblock %}
 {% block content %}
 <div class="page-head"><div><h1>Settings</h1><p>Shop text, contact details, home page, collection &amp; delivery, payments.</p></div></div>
 {% if errors %}<div class="errors" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
@@ -77,13 +93,32 @@
   <form class="card" method="post" id="orders">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="section" value="orders">
-    <div class="card-head"><div><h2>Collection, delivery &amp; ordering</h2></div></div>
+    <div class="card-head"><div><h2>Collection, PUDO, delivery &amp; ordering</h2></div></div>
+    {% if hidden_ways %}<div class="errors" style="background:var(--warn-soft);color:var(--warn);border-color:rgba(154,98,0,.3)">
+      {{ hidden_ways|join(' and ') }} {{ 'is' if hidden_ways|length == 1 else 'are' }} not offered at checkout until you set a fixed fee, because card payments charge the full amount up front.</div>{% endif %}
     <div class="field">
       <label class="switch"><span><span class="label" style="display:block">Collection</span><span class="hint">Customers fetch their order from you.</span></span>
         <input type="checkbox" name="collect_enabled" value="1" {% if s.collect_enabled == '1' %}checked{% endif %}><span class="switch-track"></span></label>
     </div>
     <label class="field"><span class="label">Collection note</span>
       <input class="input" type="text" name="collect_note" value="{{ s.collect_note }}" maxlength="300"></label>
+    <div class="field">
+      <label class="switch"><span><span class="label" style="display:block">PUDO locker</span><span class="hint">Sent to a PUDO locker the customer chooses.</span></span>
+        <input type="checkbox" name="pudo_enabled" value="1" {% if s.pudo_enabled == '1' %}checked{% endif %}><span class="switch-track"></span></label>
+    </div>
+    <div class="form-row">
+      <label class="field"><span class="label">PUDO fee charged to the customer</span>
+        <span class="input-prefix"><span>R</span><input class="input" type="text" name="pudo_fee" value="{{ s.pudo_fee }}" inputmode="decimal" placeholder="e.g. 70.00"></span>
+        {% if pudo %}<button class="btn btn-ghost btn-sm" type="button" id="pudo-rates" style="justify-self:start">{{ icon('search') }}Check PUDO's prices</button>
+        <span class="hint" id="pudo-rates-out" hidden></span>{% endif %}</label>
+      <label class="field"><span class="label">Usual parcel size</span>
+        <select class="select" name="pudo_size">
+          {% for code, label in pudo_sizes.items() %}<option value="{{ code }}" {% if s.pudo_size == code %}selected{% endif %}>{{ code }} · {{ label }}</option>{% endfor %}
+        </select>
+        <span class="hint">Pre-selected when you book a shipment; you can change it per order.</span></label>
+    </div>
+    <label class="field"><span class="label">PUDO note</span>
+      <input class="input" type="text" name="pudo_note" value="{{ s.pudo_note }}" maxlength="300"></label>
     <div class="field">
       <label class="switch"><span><span class="label" style="display:block">Delivery</span><span class="hint">You bring the order to the customer.</span></span>
         <input type="checkbox" name="delivery_enabled" value="1" {% if s.delivery_enabled == '1' %}checked{% endif %}><span class="switch-track"></span></label>
@@ -97,7 +132,7 @@
     </div>
     <label class="field"><span class="label">Message after ordering</span>
       <textarea class="textarea" name="order_message" rows="4" maxlength="800">{{ s.order_message }}</textarea>
-      <span class="hint">Shown at checkout and on the customer's order page.</span></label>
+      <span class="hint">Shown on the customer's order page after they order.</span></label>
     <button class="btn btn-primary btn-block" type="submit">Save ordering settings</button>
   </form>
 
@@ -105,10 +140,31 @@
     <div class="card-head"><div><h2>Payments</h2></div></div>
     <div class="status-list">
       <div class="status-item">
-        <div class="row-icon {{ 'ok' if payments.online else 'warn' }}">{{ icon('card') }}</div>
-        <div><strong>Card payments (Yoco): not connected yet</strong>
-          <span>Orders come in as “Unpaid”. Arrange payment with the customer, then tap <b>Mark as paid</b> on the order.
-            Yoco will be added on Rooi Nooi's own Yoco account.</span></div>
+        <div class="row-icon {{ 'ok' if payments.online and not payments.is_test else ('info' if payments.online else 'warn') }}">{{ icon('card') }}</div>
+        <div>{% if payments.online %}<strong>Card payments: {{ payments.label }}</strong>
+          <span>Customers pay by card on Yoco's page. Orders appear as New once paid.
+            {% if payments.is_test %}This is a TEST key: no real money moves. Swap in the live key when you're happy.{% endif %}</span>
+          {% else %}<strong>Card payments (Yoco): not connected</strong>
+          <span>Add <code class="inline">YOCO_SECRET_KEY</code> in AWS Lambda → Configuration → Environment variables
+            (the secret key from Yoco → Selling Online → Payment Gateway). Until then orders come in as “Unpaid”.</span>{% endif %}</div>
+      </div>
+      {% if payments.online %}
+      <div class="status-item">
+        <div class="row-icon {{ 'ok' if webhook_on else 'warn' }}">{{ icon('bolt') }}</div>
+        <div><strong>Payment notifications: {{ 'connected' if webhook_on else 'not connected' }}</strong>
+          <span>{% if webhook_on %}Yoco tells the shop the moment a payment goes through, signed so it can't be faked.
+            {% else %}Without this, payments are still checked when the customer returns to the shop. Connect it so none are missed.{% endif %}</span>
+          <form method="post" action="{{ url_for('admin.yoco_connect') }}" style="margin-top:8px">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm {{ '' if webhook_on else 'btn-primary' }}" type="submit">{{ icon('bolt') }}{{ 'Reconnect' if webhook_on else 'Connect payment notifications' }}</button>
+          </form></div>
+      </div>
+      {% endif %}
+      <div class="status-item">
+        <div class="row-icon {{ 'ok' if pudo else 'warn' }}">{{ icon('truck') }}</div>
+        <div><strong>PUDO: {{ 'connected' if pudo else 'not connected' }}{% if pudo and pudo.is_fake %} (pretend, dev only){% endif %}</strong>
+          <span>{% if pudo %}Customers pick a real PUDO locker, and you book shipments from the order page.
+            {% else %}Add <code class="inline">PUDO_API_KEY</code> in AWS Lambda (made in the PUDO portal → Settings → API Keys) to show the locker list and book shipments from the shop.{% endif %}</span></div>
       </div>
       <div class="status-item">
         <div class="row-icon info">{{ icon('store') }}</div>

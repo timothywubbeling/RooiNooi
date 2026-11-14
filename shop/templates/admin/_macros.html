@@ -1,5 +1,6 @@
 {% macro status_pill(status) -%}
-  {%- if status == 'new' -%}<span class="pill pill-bad">New</span>
+  {%- if status == 'pending' -%}<span class="pill">{{ icon('card') }}Awaiting payment</span>
+  {%- elif status == 'new' -%}<span class="pill pill-bad">New</span>
   {%- elif status == 'making' -%}<span class="pill pill-warn">Making</span>
   {%- elif status == 'ready' -%}<span class="pill pill-info">Ready</span>
   {%- elif status == 'done' -%}<span class="pill pill-ok">Done</span>
@@ -9,7 +10,7 @@
 
 {% macro pay_pill(order) -%}
   {%- if order.payment_status == 'paid' -%}<span class="pill pill-ok">Paid</span>
-  {%- elif order.status != 'cancelled' -%}<span class="pill pill-accent">Unpaid</span>
+  {%- elif order.status not in ('cancelled', 'pending') -%}<span class="pill pill-accent">Unpaid</span>
   {%- endif -%}
 {%- endmacro %}
 
@@ -31,7 +32,7 @@
   <div class="row-main">
     <div class="row-title">{{ o.customer_name }} <span class="muted">· {{ o.id }}</span></div>
     <div class="row-sub">{{ o.summary or '' }}</div>
-    <div class="row-sub">{{ o.created_at|ago }} · {{ 'Delivery' if o.fulfilment == 'delivery' else 'Collect' }}</div>
+    <div class="row-sub">{{ o.created_at|ago }} · {{ {'delivery': 'Delivery', 'pudo': 'PUDO', 'collect': 'Collect'}.get(o.fulfilment, o.fulfilment) }}</div>
   </div>
   <div class="row-end">
     <span class="row-amount">{{ o.total_cents|rands }}</span>

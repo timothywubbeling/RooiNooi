@@ -414,3 +414,15 @@ textarea.field { resize: vertical; min-height: 90px; }
   background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 999px; font-size: 0.9rem; box-shadow: var(--shadow);
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } html { scroll-behavior: auto; } }
+
+/* PUDO locker picker */
+.hint-text { font-size: 0.82rem; color: var(--muted); }
+.hint-text a { color: var(--wine); }
+.locker-results { display: grid; gap: 6px; max-height: 320px; overflow-y: auto; }
+.locker-results:empty { display: none; }
+.locker-option { text-align: left; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 10px; background: #fff; cursor: pointer; display: grid; gap: 2px; font-size: 0.92rem; }
+.locker-option:hover, .locker-option:focus-visible { border-color: var(--wine); background: #fffafa; }
+.locker-option small { color: var(--muted); font-size: 0.8rem; }
+.locker-picked { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; padding: 12px 14px; border: 1px solid var(--wine); border-radius: 12px; background: #fffafa; font-size: 0.92rem; }
+.locker-picked button { background: none; border: 0; color: var(--wine); text-decoration: underline; cursor: pointer; flex: none; }
+.fld.has-error .locker-picked, .fld.has-error #locker-input { border-color: var(--bad); }
