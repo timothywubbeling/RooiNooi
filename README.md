@@ -96,8 +96,8 @@ flow as the vending machine (`shop/payment.py`, `shop/orders.py`).
 
 1. In Yoco: **Selling Online → Payment Gateway**, copy the **secret key** (`sk_live_…`,
    or `sk_test_…` to try it with test cards first).
-2. In AWS Lambda `rooi-nooi-shop` → **Configuration → Environment variables**, add
-   `YOCO_SECRET_KEY` with that key. Save.
+2. Have the hosting provider set `YOCO_SECRET_KEY` to that key in `/etc/rooinooi.env`
+   on the server and restart the shop (send the key to them privately).
 3. In the shop admin → **Settings → Payments**, tap **Connect payment notifications**.
    The shop registers its webhook with Yoco and keeps the signing secret in the database.
 
@@ -118,7 +118,7 @@ Customers can choose **PUDO locker**: they pick their locker, pay the PUDO fee y
 Settings, and you send it **locker to locker** (you drop the parcel in any PUDO locker).
 
 1. In the PUDO / Courier Guy portal: **Settings → API Keys**, create a key.
-2. In AWS Lambda → Environment variables, add `PUDO_API_KEY`.
+2. Have the hosting provider add `PUDO_API_KEY` to `/etc/rooinooi.env` and restart.
 3. In the admin → **Settings**, set the PUDO fee (**Check PUDO's prices** shows the
    current rates) and your usual parcel size.
 
@@ -137,10 +137,8 @@ tests use them too.
 
 ## Limits to know about
 
-- **AWS Free plan:** the account can only use the Stockholm region, and the free plan ends
-  on 13 May 2027 (or when the $100 credit runs out). Upgrade the AWS account to the
-  paid plan before then or the shop goes offline. At this traffic Lambda stays inside the
-  always-free allowance.
+- **AWS copy:** only matters while it's still running. The AWS Free plan ends on 13 May 2027;
+  switch the copy off once the provider's server is live instead of upgrading.
 - **Supabase free plan:** a project with no activity for a week is paused. Visitors to the
   shop count as activity; if it does pause, press *Restore* in the Supabase dashboard.
 - Photos up to 4 MB each (the admin shrinks phone photos automatically).
