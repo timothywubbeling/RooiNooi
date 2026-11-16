@@ -5,30 +5,27 @@ napkins) with an admin built like the vending machine one: phone first, bottom t
 phone, left menu on a laptop.
 
 Python + Flask. Locally it uses a SQLite file; live it uses **Supabase Postgres** and runs
-on **AWS Lambda**.
+on the **hosting provider's server** (gunicorn behind Nginx). Server setup: [HOSTING.md](HOSTING.md).
 
 ## How it is hosted
 
 ```
 GitHub (timothywubbeling/RooiNooiEcommerceStore)
-   │  push to main
+   │  push to main → GitHub runs the tests (Actions tab)
    ▼
-GitHub Actions ── runs the tests ── builds the package ── updates the Lambda
-                                                            │
-AWS Lambda "rooi-nooi-shop" (eu-north-1, Stockholm)  ◄──────┘
-   │  public address (Function URL)
-   │  DATABASE_URL environment variable
+Hosting provider's server: git pull + restart (HOSTING.md, "Updating")
+   │  gunicorn behind Nginx, https://www.<domain>
+   │  DATABASE_URL, YOCO_SECRET_KEY, PUDO_API_KEY in /etc/rooinooi.env
    ▼
 Supabase Postgres (North EU, Stockholm): products, orders, settings and the photos
 ```
 
-- **Live shop:** https://kcrafybzwmlg2dvsfgq3asprwm0pekem.lambda-url.eu-north-1.on.aws/
-- **Admin:** add `/admin` to that address. Starter password `1234`, you must pick your own
+- **Admin:** the shop address + `/admin`. Starter password `1234`; you must pick your own
   at first login.
+- The earlier **AWS Lambda copy** still runs on the same database until it is switched off.
+  It is only updated when "Test and deploy" is run by hand in the Actions tab.
 
 ### Making a change
-
-Edit the code, then:
 
 ```bash
 git add -A
@@ -36,20 +33,18 @@ git commit -m "What I changed"
 git push
 ```
 
-GitHub runs the tests (`tests/`) and, if they pass, puts the new version live within a
-couple of minutes. Watch it under the repository's **Actions** tab. If a test fails,
-nothing is deployed and the live shop keeps running the previous version.
+GitHub runs the tests. When they pass (green tick under **Actions**), ask the hosting
+provider to update the server; it's one command for them. If a test fails (red cross),
+fix it before asking them.
 
 Products, prices, photos, options and settings are changed in the admin, not in code.
 
 ### Secrets
 
-- The Supabase connection string is only stored in the Lambda's environment variables
-  (`DATABASE_URL`), never in this repository.
-- GitHub deploys with an access key stored as repository secrets (`AWS_ACCESS_KEY_ID`,
-  `AWS_SECRET_ACCESS_KEY`) for the IAM user `rooi-nooi-shop-github-deploy`, which may only
-  update this one function's code. (The keyless OpenID Connect link needs the paid AWS plan.)
-- The admin password and session key live in the database.
+- The database connection string and the Yoco / PUDO keys live only on the server
+  (`/etc/rooinooi.env`), never in this repository.
+- After the shop moves to its domain, tap **Settings → Payments → Connect payment
+  notifications** in the admin so Yoco sends confirmations to the new address.
 
 ## Run it on your own computer
 
