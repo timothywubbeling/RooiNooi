@@ -10,7 +10,7 @@ on the **hosting provider's server** (gunicorn behind Nginx). Server setup: [HOS
 ## How it is hosted
 
 ```
-GitHub (timothywubbeling/RooiNooiEcommerceStore)
+GitHub (timothywubbeling/RooiNooi)
    │  push to main → GitHub runs the tests (Actions tab)
    ▼
 Hosting provider's server: git pull + restart (HOSTING.md, "Updating")

@@ -20,13 +20,13 @@ tool beyond this file: clone, install, run it with gunicorn, put Nginx in front.
 
 ```bash
 sudo useradd --system --create-home --home-dir /opt/rooinooi rooinooi
-sudo -u rooinooi git clone https://github.com/timothywubbeling/RooiNooiEcommerceStore.git /opt/rooinooi/app
+sudo -u rooinooi git clone https://github.com/timothywubbeling/RooiNooi.git /opt/rooinooi/app
 cd /opt/rooinooi/app
 sudo -u rooinooi python3 -m venv .venv
 sudo -u rooinooi .venv/bin/pip install -r requirements.txt gunicorn
 ```
 
-The repo is private: use a GitHub **deploy key** (read-only) or the access the owner gives you.
+The repo is public, so no login is needed to clone or pull.
 
 ## 2. Settings (environment variables)
 
