@@ -145,8 +145,9 @@
           <span>Customers pay by card on Yoco's page. Orders appear as New once paid.
             {% if payments.is_test %}This is a TEST key: no real money moves. Swap in the live key when you're happy.{% endif %}</span>
           {% else %}<strong>Card payments (Yoco): not connected</strong>
-          <span>Add <code class="inline">YOCO_SECRET_KEY</code> in AWS Lambda → Configuration → Environment variables
-            (the secret key from Yoco → Selling Online → Payment Gateway). Until then orders come in as “Unpaid”.</span>{% endif %}</div>
+          <span>The server has no <code class="inline">YOCO_SECRET_KEY</code>. Ask whoever runs the server to add it to the shop's
+            settings file (<code class="inline">/etc/rooinooi.env</code>) and restart the shop. The key is in Yoco → Connect → Checkout API.
+            Until then orders come in as “Unpaid”.</span>{% endif %}</div>
       </div>
       {% if payments.online %}
       <div class="status-item">
@@ -164,7 +165,7 @@
         <div class="row-icon {{ 'ok' if pudo else 'warn' }}">{{ icon('truck') }}</div>
         <div><strong>PUDO: {{ 'connected' if pudo else 'not connected' }}{% if pudo and pudo.is_fake %} (pretend, dev only){% endif %}</strong>
           <span>{% if pudo %}Customers pick a real PUDO locker, and you book shipments from the order page.
-            {% else %}Add <code class="inline">PUDO_API_KEY</code> in AWS Lambda (made in the PUDO portal → Settings → API Keys) to show the locker list and book shipments from the shop.{% endif %}</span></div>
+            {% else %}Ask whoever runs the server to add <code class="inline">PUDO_API_KEY</code> to <code class="inline">/etc/rooinooi.env</code> and restart (the key is made in the PUDO portal → Settings → API Keys). Until then customers type their locker.{% endif %}</span></div>
       </div>
       <div class="status-item">
         <div class="row-icon info">{{ icon('store') }}</div>
