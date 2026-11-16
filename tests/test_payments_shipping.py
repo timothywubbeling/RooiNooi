@@ -169,3 +169,16 @@ def test_without_keys_shop_still_works(tmp_path, monkeypatch):
     order = conn(app).execute("SELECT * FROM orders WHERE id = ?", (r.get_json()["order_id"],)).fetchone()
     assert order["status"] == "new" and order["pudo_terminal"] is None
     assert b"Place order" in client.get("/checkout").data
+
+
+def test_admin_picks_up_payments_without_webhook(app):
+    """A customer pays and closes the tab: opening the admin asks Yoco and marks it paid."""
+    client = app.test_client()
+    data = place(app, client).get_json()
+    checkout_id = conn(app).execute("SELECT checkout_id FROM orders WHERE id = ?", (data["order_id"],)).fetchone()[0]
+    app.extensions["shop"].payments.set_status(checkout_id, "paid")      # paid at Yoco, never came back
+    admin = app.test_client()
+    login(admin)
+    assert b"Yoco confirmed a card payment" in admin.get("/admin/").data
+    row = conn(app).execute("SELECT status, payment_status FROM orders WHERE id = ?", (data["order_id"],)).fetchone()
+    assert row["payment_status"] == "paid" and row["status"] == "new"

@@ -128,17 +128,25 @@ class YocoPayments:
 
     def register_webhook(self, url, name="Rooi Nooi shop"):
         """(Re)register the payment webhook. Returns (webhook id, signing secret)."""
+        # Yoco allows one webhook per key, and its secret is only shown when it is made. So any
+        # earlier address of this shop (an old domain, the AWS copy) is removed first; webhooks
+        # that belong to something else on the Yoco account are left alone.
         status, data = self._call("GET", "/webhooks")
         if status == 200:
             hooks = data.get("subscriptions", data) if isinstance(data, dict) else data
             for hook in hooks or []:
-                if isinstance(hook, dict) and hook.get("url") == url and hook.get("id"):
-                    self._call("DELETE", f"/webhooks/{hook['id']}")   # its secret is only shown once
+                if (isinstance(hook, dict) and hook.get("id")
+                        and str(hook.get("url") or "").rstrip("/").endswith("/webhook/yoco")):
+                    d_status, d_data = self._call("DELETE", f"/webhooks/{hook['id']}")
+                    print(f">> removed old Yoco webhook {hook.get('url')}: HTTP {d_status}")
+        else:
+            print(f"!! listing Yoco webhooks: HTTP {status} {str(data)[:300]}")
         status, data = self._call("POST", "/webhooks", {"name": name, "url": url})
-        if status >= 400 or not data.get("secret"):
+        if status >= 400 or not isinstance(data, dict) or not data.get("secret"):
+            detail = data if not isinstance(data, dict) else (
+                data.get("description") or data.get("message") or data.get("errorMessage") or data)
             print(f"!! Yoco webhook registration failed: HTTP {status} {str(data)[:300]}")
-            raise PaymentError(data.get("description") or data.get("message") or
-                               f"Yoco refused the webhook (HTTP {status}).")
+            raise PaymentError(f"Yoco refused the webhook (HTTP {status}): {str(detail)[:200]}")
         return data.get("id", ""), data["secret"]
 
 

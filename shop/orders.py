@@ -1,4 +1,6 @@
 """Order payment helpers shared by the shop pages, the Yoco webhook and the admin."""
+from datetime import datetime, timedelta, timezone
+
 from flask import url_for
 
 from . import db as dbm
@@ -56,4 +58,21 @@ def refresh_payment(conn, order):
     return order
 
 
-__all__ = ["get_order", "mark_paid", "order_link", "start_payment", "refresh_payment", "PaymentError"]
+def refresh_recent_pending(conn, limit=6, days=3):
+    """Ask Yoco about the latest card orders still waiting, so a payment is never missed even
+    without webhooks (a customer who paid and closed the tab). Returns how many became paid."""
+    payments = services().payments
+    if not payments.online:
+        return 0
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
+    rows = conn.execute(
+        "SELECT * FROM orders WHERE status = 'pending' AND payment_status != 'paid' AND checkout_id IS NOT NULL "
+        "AND created_at >= ? ORDER BY created_at DESC LIMIT ?", (since, limit)).fetchall()
+    paid = 0
+    for order in rows:
+        if refresh_payment(conn, order)["payment_status"] == "paid":
+            paid += 1
+    return paid
+
+
+__all__ = ["refresh_recent_pending", "get_order", "mark_paid", "order_link", "start_payment", "refresh_payment", "PaymentError"]

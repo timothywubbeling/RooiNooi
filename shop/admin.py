@@ -10,7 +10,7 @@ from . import catalogue as cat
 from . import db as dbm
 from .helpers import local_now, local_to_utc_str, parse_money, public_base, services
 from .images import ImageError, is_stored, store_upload
-from .orders import mark_paid, refresh_payment
+from .orders import mark_paid, refresh_payment, refresh_recent_pending
 from .payment import PaymentError
 from .pudo import SIZES as PUDO_SIZES, PudoError
 
@@ -152,6 +152,8 @@ def to_make():
 @bp.get("/")
 @auth.login_required
 def dashboard():
+    if refresh_recent_pending(g.db):
+        flash("Yoco confirmed a card payment that hadn't come through yet. That order is now New.")
     now = local_now()
     day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     month_start = day_start.replace(day=1)
@@ -514,6 +516,7 @@ ORDER_FILTERS = {
 @bp.get("/orders")
 @auth.login_required
 def orders():
+    refresh_recent_pending(g.db)
     show = request.args.get("show") if request.args.get("show") in ORDER_FILTERS else "open"
     q = _clean(request.args.get("q"), 60)
     page = _int(request.args.get("page"), 1, 10000, 1)
