@@ -66,7 +66,8 @@ class PudoClient:
         self._lock = threading.Lock()
 
     def _call(self, method, url, body=None, auth=True):
-        headers = {"Accept": "application/json", "Content-Type": "application/json"}
+        headers = {"Accept": "application/json", "Content-Type": "application/json",
+                   "User-Agent": "RooiNooiShop/1.0 (+https://rooinooi.co.za)"}   # not urllib's default
         if auth:
             headers["Authorization"] = f"Bearer {self.api_key}"
         data = json.dumps(body).encode() if body is not None else None

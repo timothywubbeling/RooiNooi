@@ -26,6 +26,9 @@ import urllib.request
 import uuid
 
 YOCO_API = "https://payments.yoco.com/api"
+# Yoco is behind Cloudflare, which blocks Python's default "Python-urllib/3.x" signature
+# (Error 1010) from many servers. Always say who we are.
+USER_AGENT = "RooiNooiShop/1.0 (+https://rooinooi.co.za)"
 
 PAID = "paid"
 FAILED = "failed"
@@ -80,7 +83,7 @@ class YocoPayments:
 
     def _call(self, method, path, body=None, idempotency_key=None):
         headers = {"Authorization": f"Bearer {self.secret_key}", "Content-Type": "application/json",
-                   "Accept": "application/json"}
+                   "Accept": "application/json", "User-Agent": USER_AGENT}
         if idempotency_key:
             headers["Idempotency-Key"] = idempotency_key
         data = json.dumps(body).encode() if body is not None else None

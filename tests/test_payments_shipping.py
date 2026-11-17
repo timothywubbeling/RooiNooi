@@ -182,3 +182,28 @@ def test_admin_picks_up_payments_without_webhook(app):
     assert b"Yoco confirmed a card payment" in admin.get("/admin/").data
     row = conn(app).execute("SELECT status, payment_status FROM orders WHERE id = ?", (data["order_id"],)).fetchone()
     assert row["payment_status"] == "paid" and row["status"] == "new"
+
+
+def test_outgoing_calls_do_not_use_pythons_default_signature(monkeypatch):
+    """Yoco's Cloudflare blocks 'Python-urllib' (Error 1010), so every call names the shop."""
+    import io
+    import urllib.request
+    from shop.payment import YocoPayments
+    from shop.pudo import build_pudo
+    seen = []
+
+    class Resp(io.BytesIO):
+        status = 200
+        headers = {"Content-Type": "application/json"}
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    def fake_urlopen(req, timeout=None):
+        seen.append(req.get_header("User-agent"))
+        return Resp(b"{}")
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    YocoPayments("sk_test_x").checkout_status("ch_1")
+    pudo = build_pudo({"pudo_api_key": "k"})
+    pudo._call("GET", "https://api-pudo.co.za/api/v1/x")
+    assert len(seen) == 2 and all(ua and ua.startswith("RooiNooiShop/") for ua in seen)
