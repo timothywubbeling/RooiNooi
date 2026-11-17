@@ -69,7 +69,7 @@ WantedBy=multi-user.target
 
 ```bash
 sudo systemctl daemon-reload && sudo systemctl enable --now rooinooi
-curl -s http://127.0.0.1:8000/healthz      # {"ok": true}
+curl -s http://127.0.0.1:8000/healthz      # {"ok": true, "commit": "<running version>"}
 journalctl -u rooinooi -f                  # logs
 ```
 
@@ -102,6 +102,10 @@ server {
 The app trusts exactly **one** proxy hop (`X-Forwarded-*`), so keep Nginx as the only
 proxy in front, or tell the owner if there is another layer (Cloudflare etc.).
 
+Keep `X-Forwarded-Proto` as shown: from it the app knows visitors are on HTTPS, so it sends
+HSTS (`max-age=31536000`, this domain only, no subdomains) and marks the admin login cookie
+`Secure`. No HSTS header is needed in Nginx.
+
 ## 5. Check
 
 - `https://www.<domain>/` shows the shop, `/healthz` returns `{"ok": true}`
@@ -115,6 +119,9 @@ so Yoco sends payment confirmations to `https://www.<domain>/webhook/yoco`.
 ```bash
 cd /opt/rooinooi/app && sudo -u rooinooi git pull && sudo -u rooinooi .venv/bin/pip install -r requirements.txt && sudo systemctl restart rooinooi
 ```
+
+Afterwards `https://<domain>/healthz` shows the running `commit`; it should match the newest
+commit on GitHub.
 
 Tests (optional): `.venv/bin/pip install pytest && .venv/bin/python -m pytest -q`
 (they use a throwaway SQLite database, never the live one).

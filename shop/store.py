@@ -381,4 +381,4 @@ def sitemap():
 @bp.get("/healthz")
 def healthz():
     g.db.execute("SELECT 1").fetchone()
-    return {"ok": True}
+    return {"ok": True, "commit": services().commit}   # which update the server runs
